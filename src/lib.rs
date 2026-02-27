@@ -1,4 +1,7 @@
 pub mod ticket_lib {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, Debug)]
     enum TicketStatus {
         Unused,
         Used,
@@ -16,6 +19,7 @@ pub mod ticket_lib {
     // 	location: String,
     // }
 
+    #[derive(Serialize, Deserialize, Debug)]
     pub struct Ticket {
         // TODO: use uuid for id
         // TODO: use uuid for event or Event Struct called by uuid
@@ -40,6 +44,19 @@ pub mod ticket_lib {
 
         pub fn verify(ticket_id: &str) {
             ticket_id.to_string();
+        }
+
+        pub fn burn_ticket(&mut self) -> Result<String, String> {
+            match self.status {
+                TicketStatus::Unused => {
+                    self.status = TicketStatus::Used;
+                    Ok("ticket has been successfully burned".to_string())
+                }
+                TicketStatus::Used => Err("Ticket has already been used!".to_string()),
+                TicketStatus::Cancelled => {
+                    Err("Event has been cancelled. Ticket is invalid!".to_string())
+                }
+            }
         }
     }
 }
