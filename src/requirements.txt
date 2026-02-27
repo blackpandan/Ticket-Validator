@@ -1,0 +1,23 @@
+| REQUIREMENTS
+--------------------------------------------------------------------------------------------------
+- ticket must be assigned a UUID for its ID (use uuid lib)
+- must contain reference to a specific event (by id or name)
+- ticket must have a status (Unused, Used, Cancelled)
+- cryptographics signature -> data (ID + Event + Status) use private key known only to organizers | 
+
+
+|| FUNCTIONAL REQUIREMENTS
+- Ticket Creation -> input event name and price (creates ticket with other necessary fields)
+- Ticket Scanning -> User Inputs a ticket uuid (locate ticket in local db, checks status) |
+	check if unsed, yes -> update to Used, no -> throw valid errors
+ 
+|| LIBS TO USE
+- serde -> for serialization
+- uuid -> for ID uuid
+- ed25519-dalek -> for signature encryption and decryption
+- explore clap for cli arguments
+
+|| ARGUMENTS:
+
+	||| CREATION -> -- create event_name price
+	||| SCANNING -> -- scan uuid 
