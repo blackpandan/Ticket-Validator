@@ -1,4 +1,9 @@
 pub mod ticket_lib {
+
+    use ed25519_dalek::{
+        PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH, Signature, Signer, SigningKey, Verifier, VerifyingKey,
+    };
+    use rand::rngs::OsRng;
     use serde::{Deserialize, Serialize};
     use uuid::Uuid;
 
@@ -10,10 +15,10 @@ pub mod ticket_lib {
     }
 
     // struct Event {
-    // 	// TODO: use uuid for id
+    // 	// TODO-Done: use uuid for id
     // 	// TODO: use date type or crate for date
     // 	// TODO: use time type/crate for time
-    // 	id: String,
+    // 	id: Uuid,
     // 	name: String,
     // 	date: String,
     // 	time: String,
@@ -22,42 +27,71 @@ pub mod ticket_lib {
 
     #[derive(Serialize, Deserialize, Debug)]
     pub struct Ticket {
-        // TODO: use uuid for id
+        // TODO-Done: use uuid for id
+        // TODO-Done: use encrypted data for signature
         // TODO: use uuid for event or Event Struct called by uuid
-        // TODO: use encrypted data for signature
         pub id: Uuid,
         pub event: String,
         pub price: f32,
         status: TicketStatus,
-        signature: String,
+        pub public_key: [u8; PUBLIC_KEY_LENGTH],
+        #[serde(with = "serde_bytes")]
+        signature: [u8; SIGNATURE_LENGTH],
     }
 
     impl Ticket {
-        pub fn new(event: String, price: f32) -> Self {
-            Self {
-                id: Uuid::new_v4(),
-                event,
-                price,
-                status: TicketStatus::Unused,
-                signature: "yuagdhopoijfv".to_string(),
+        pub fn new(event: String, price: f32) -> (Self, SigningKey) {
+            let id: Uuid = Uuid::new_v4();
+
+            let mut csprng = OsRng;
+            let signing_key: SigningKey = SigningKey::generate(&mut csprng);
+            let message_string: String = format!("{id}{price}{event}");
+            let message: &[u8] = message_string.as_bytes();
+
+            let public_key = signing_key.verifying_key().to_bytes();
+            let signature = signing_key.sign(message).to_bytes();
+
+            (
+                Self {
+                    id,
+                    event,
+                    price,
+                    status: TicketStatus::Unused,
+                    public_key,
+                    signature,
+                },
+                signing_key,
+            )
+        }
+
+        pub fn verify(&self) -> bool {
+            let verifying_key: VerifyingKey =
+                VerifyingKey::from_bytes(&self.public_key).expect("Error getting Public Key");
+            let signature: Signature =
+                Signature::try_from(self.signature).expect("Error getting Signature");
+            let message_string: String = format!("{}{}{}", self.id, self.price, self.event);
+
+            match verifying_key.verify(message_string.as_bytes(), &signature) {
+                Ok(_) => true,
+                Err(_) => false,
             }
         }
 
-        pub fn verify(ticket_id: &str) {
-            ticket_id.to_string();
-        }
-
         pub fn burn_ticket(mut self) -> Result<Self, String> {
-            match self.status {
-                TicketStatus::Unused => {
-                    self.status = TicketStatus::Used;
-                    // Ok("ticket has been successfully burned".to_string())
-                    Ok(self)
+            if self.verify() {
+                match self.status {
+                    TicketStatus::Unused => {
+                        self.status = TicketStatus::Used;
+                        // Ok("ticket has been successfully burned".to_string())
+                        Ok(self)
+                    }
+                    TicketStatus::Used => Err("Ticket has already been used!".to_string()),
+                    TicketStatus::Cancelled => {
+                        Err("Event has been cancelled. Ticket is invalid!".to_string())
+                    }
                 }
-                TicketStatus::Used => Err("Ticket has already been used!".to_string()),
-                TicketStatus::Cancelled => {
-                    Err("Event has been cancelled. Ticket is invalid!".to_string())
-                }
+            } else {
+                Err("Ticket is invalid!".to_string())
             }
         }
     }
