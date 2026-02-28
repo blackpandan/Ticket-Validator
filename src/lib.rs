@@ -46,11 +46,12 @@ pub mod ticket_lib {
             ticket_id.to_string();
         }
 
-        pub fn burn_ticket(&mut self) -> Result<String, String> {
+        pub fn burn_ticket(mut self) -> Result<Self, String> {
             match self.status {
                 TicketStatus::Unused => {
                     self.status = TicketStatus::Used;
-                    Ok("ticket has been successfully burned".to_string())
+                    // Ok("ticket has been successfully burned".to_string())
+                    Ok(self)
                 }
                 TicketStatus::Used => Err("Ticket has already been used!".to_string()),
                 TicketStatus::Cancelled => {
