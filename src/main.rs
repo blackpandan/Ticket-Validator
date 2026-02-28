@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use ed25519_dalek::SigningKey;
 use std::{
     io::{Write, stdin, stdout},
     process,
@@ -44,6 +45,19 @@ fn main() {
         ),
     };
 
+    let mut key_db = match PickleDb::load(
+        "keys.db",
+        PickleDbDumpPolicy::DumpUponRequest,
+        SerializationMethod::Json,
+    ) {
+        Ok(existing_db) => existing_db,
+        Err(_) => PickleDb::new(
+            "keys.db",
+            PickleDbDumpPolicy::DumpUponRequest,
+            SerializationMethod::Json,
+        ),
+    };
+
     println!("\n\n-------------------------------------------------------------------------");
     println!("\n    TICKET VALIDATOR");
     println!("\n--------------------------------------------------------------------------\n\n");
@@ -51,8 +65,9 @@ fn main() {
     match &cli.command {
         Commands::Create { name, price } => {
             println!("'Creating Ticket!' -> Ticket {{ name: {name}, price: {price} }}");
-            let new_ticket: Ticket = Ticket::new("ut2345hhh".to_string(), 32.00);
-            let new_ticket = create_ticket(new_ticket, &mut db);
+            let new_ticket = Ticket::new("ut2345hhh".to_string(), 32.00);
+
+            let new_ticket = create_ticket(new_ticket, &mut db, &mut key_db);
 
             match new_ticket {
                 Ok(success_message) => println!("{success_message}\n\n"),
@@ -72,14 +87,24 @@ fn main() {
     }
 }
 
-fn create_ticket(ticket: Ticket, db: &mut PickleDb) -> Result<String, &str> {
+fn create_ticket<'a>(
+    ticket: (Ticket, SigningKey),
+    db: &'a mut PickleDb,
+    key_db: &'a mut PickleDb,
+) -> Result<String, &'a str> {
     // GIT: added checks to see if ticket exists before creation
-    if !db.exists(format!("{}", ticket.id).as_str()) {
-        if let Ok(()) = db.set(format!("{}", ticket.id).as_str(), &ticket) {
+    if !db.exists(format!("{}", ticket.0.id).as_str()) {
+        if let Ok(()) = db.set(format!("{}", ticket.0.id).as_str(), &ticket.0) {
             db.dump().unwrap();
+            if let Ok(()) = key_db.set(format!("{}", ticket.0.id).as_str(), &ticket.1) {
+                key_db.dump().unwrap();
+            } else {
+                return Err("\nCould not save Signing Key");
+            }
+
             Ok(format!(
                 "\nTicket ID: {} Successfully Created!\n\n",
-                ticket.id
+                ticket.0.id
             ))
         } else {
             Err("\nCould not save ticket")
