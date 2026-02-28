@@ -1,6 +1,10 @@
 use clap::{Parser, Subcommand};
-use std::{io::stdin, process};
+use std::{
+    io::{Write, stdin, stdout},
+    process,
+};
 use ticket_validator::ticket_lib::Ticket;
+use uuid::Uuid;
 
 use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
 
@@ -22,7 +26,7 @@ enum Commands {
     Create { name: String, price: f32 },
 
     /// Scans a ticket and burns it up if unsed
-    Scan { ticket_uuid: String },
+    Scan { ticket_uuid: Uuid },
 }
 
 fn main() {
@@ -40,66 +44,81 @@ fn main() {
         ),
     };
 
-    println!("TICKET VALIDATOR");
+    println!("\n\n-------------------------------------------------------------------------");
+    println!("\n    TICKET VALIDATOR");
+    println!("\n--------------------------------------------------------------------------\n\n");
 
     match &cli.command {
         Commands::Create { name, price } => {
-            println!("'create was used', name: {name}, price: {price}");
+            println!("'Creating Ticket!' -> Ticket {{ name: {name}, price: {price} }}");
             let new_ticket: Ticket = Ticket::new("ut2345hhh".to_string(), 32.00);
             let new_ticket = create_ticket(new_ticket, &mut db);
 
             match new_ticket {
-                Ok(success_message) => println!("{success_message}"),
-                Err(error_message) => eprintln!("{error_message}"),
+                Ok(success_message) => println!("{success_message}\n\n"),
+                Err(error_message) => eprintln!("{error_message}\n\n"),
             }
         }
 
         Commands::Scan { ticket_uuid } => {
-            println!("'scan was used', ticket_uuid: {ticket_uuid}");
-            let gotten_ticket = scan_ticket("theidtee".to_string(), &mut db);
+            println!("'Ticket scanning started!' -> Ticket UUID: {ticket_uuid}");
+            let gotten_ticket = scan_ticket(*ticket_uuid, &mut db);
 
             match gotten_ticket {
-                Ok(message) => println!("COMPLETED: {:}", message),
-                Err(err) => eprintln!("{}", err),
+                Ok(message) => println!("\n\nCOMPLETED: {}\n\n\n", message.trim()),
+                Err(err) => eprintln!("{}\n\n", err),
             }
         }
     }
 }
 
 fn create_ticket(ticket: Ticket, db: &mut PickleDb) -> Result<String, &str> {
-    println!("{}", ticket.id);
-    if let Ok(()) = db.set(format!("{}", ticket.id).as_str(), &ticket) {
-        db.dump().unwrap();
-        Ok(format!("ticket: {} successfully created!", ticket.id))
+    // GIT: added checks to see if ticket exists before creation
+    if !db.exists(format!("{}", ticket.id).as_str()) {
+        if let Ok(()) = db.set(format!("{}", ticket.id).as_str(), &ticket) {
+            db.dump().unwrap();
+            Ok(format!(
+                "\nTicket ID: {} Successfully Created!\n\n",
+                ticket.id
+            ))
+        } else {
+            Err("\nCould not save ticket")
+        }
     } else {
-        Err("could not save ticket")
+        Err("\nTicket with that id already exist!")
     }
 }
 
-fn scan_ticket(ticket_uuid: String, db: &mut PickleDb) -> Result<String, String> {
-    if let Some(ticket) = db.get::<Ticket>(&ticket_uuid) {
+fn scan_ticket(ticket_uuid: Uuid, db: &mut PickleDb) -> Result<String, String> {
+    if let Some(ticket) = db.get::<Ticket>(
+        &ticket_uuid
+            .hyphenated()
+            .encode_lower(&mut Uuid::encode_buffer()),
+    ) {
         let mut user_choice = String::new();
 
-        println!("Do you want to use the ticket? (y/n): ");
+        print!("\nDo you want to use the ticket? (y/n): ");
+        stdout().flush().unwrap();
         stdin().read_line(&mut user_choice).unwrap();
-        println!("you selected {user_choice}");
+        // println!("you selected {user_choice}");
 
         if user_choice.trim().to_lowercase() == "y" {
             match ticket.burn_ticket() {
                 Ok(nticket) => {
                     if let Ok(()) = db.set(format!("{}", nticket.id).as_str(), &nticket) {
                         db.dump().unwrap();
-                        Ok("Ticket Used Successfully!".to_string())
+                        Ok("\nTicket Used Successfully!".to_string())
                     } else {
-                        Err("Error updating ticket".to_string())
+                        Err("\nError updating ticket".to_string())
                     }
                 }
-                Err(err) => Err(format!("Error updating ticket: {}", err)),
+                Err(err) => Err(format!("\nError updating ticket: {}", err)),
             }
         } else {
+            println!("\n\n\n");
             process::exit(1);
         }
     } else {
-        Err("could not retrieve ticket!".to_string())
+        Err("\nCould not retrieve ticket!".to_string())
     }
 }

@@ -1,5 +1,6 @@
 pub mod ticket_lib {
     use serde::{Deserialize, Serialize};
+    use uuid::Uuid;
 
     #[derive(Serialize, Deserialize, Debug)]
     enum TicketStatus {
@@ -24,7 +25,7 @@ pub mod ticket_lib {
         // TODO: use uuid for id
         // TODO: use uuid for event or Event Struct called by uuid
         // TODO: use encrypted data for signature
-        pub id: String,
+        pub id: Uuid,
         pub event: String,
         pub price: f32,
         status: TicketStatus,
@@ -34,7 +35,7 @@ pub mod ticket_lib {
     impl Ticket {
         pub fn new(event: String, price: f32) -> Self {
             Self {
-                id: String::from("theidtee"),
+                id: Uuid::new_v4(),
                 event,
                 price,
                 status: TicketStatus::Unused,
