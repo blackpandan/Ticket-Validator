@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::{io::stdin, process};
 use ticket_validator::ticket_lib::Ticket;
 
 use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
@@ -58,7 +59,7 @@ fn main() {
             let gotten_ticket = scan_ticket("theidtee".to_string(), &mut db);
 
             match gotten_ticket {
-                Ok(ticket) => println!("ticket retrieved: {:?}", ticket),
+                Ok(message) => println!("COMPLETED: {:}", message),
                 Err(err) => eprintln!("{}", err),
             }
         }
@@ -76,8 +77,28 @@ fn create_ticket(ticket: Ticket, db: &mut PickleDb) -> Result<String, &str> {
 }
 
 fn scan_ticket(ticket_uuid: String, db: &mut PickleDb) -> Result<String, String> {
-    if let Some(mut ticket) = db.get::<Ticket>(&ticket_uuid) {
-        ticket.burn_ticket()
+    if let Some(ticket) = db.get::<Ticket>(&ticket_uuid) {
+        let mut user_choice = String::new();
+
+        println!("Do you want to use the ticket? (y/n): ");
+        stdin().read_line(&mut user_choice).unwrap();
+        println!("you selected {user_choice}");
+
+        if user_choice.trim().to_lowercase() == "y" {
+            match ticket.burn_ticket() {
+                Ok(nticket) => {
+                    if let Ok(()) = db.set(format!("{}", nticket.id).as_str(), &nticket) {
+                        db.dump().unwrap();
+                        Ok("Ticket Used Successfully!".to_string())
+                    } else {
+                        Err("Error updating ticket".to_string())
+                    }
+                }
+                Err(err) => Err(format!("Error updating ticket: {}", err)),
+            }
+        } else {
+            process::exit(1);
+        }
     } else {
         Err("could not retrieve ticket!".to_string())
     }
