@@ -6,12 +6,10 @@ the setup is done using cargo, you can also use the exe from the release , you'l
 
 
 ## USAGE WITH CARGO
--------------------
 **cargo run --** {command}
 
 
 ## USAGE WITH EXE
------------------
 **ticket_validator.exe** <COMMAND>
 
 
