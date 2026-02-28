@@ -8,3 +8,6 @@ clap = { version = "4.5.60", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 uuid = { version = "1.21.0", features = ["serde", "v4"]}
 pickledb = "0.5.1"
+ed25519-dalek = { version = "2.2.0", features = ["rand_core", "serde"] }
+serde_bytes = "0.11.19"
+rand = { version = "0.8.5" }
