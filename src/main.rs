@@ -65,7 +65,7 @@ fn main() {
     match &cli.command {
         Commands::Create { name, price } => {
             println!("'Creating Ticket!' -> Ticket {{ name: {name}, price: {price} }}");
-            let new_ticket = Ticket::new("ut2345hhh".to_string(), 32.00);
+            let new_ticket = Ticket::new(name.clone(), *price);
 
             let new_ticket = create_ticket(new_ticket, &mut db, &mut key_db);
 

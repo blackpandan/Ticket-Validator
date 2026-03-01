@@ -1,3 +1,9 @@
+pub mod cli;
+pub mod crypto;
+pub mod db;
+pub mod errors;
+pub mod ticket;
+
 pub mod ticket_lib {
 
     use ed25519_dalek::{
