@@ -1,34 +1,12 @@
-use clap::{Parser, Subcommand};
-use ed25519_dalek::SigningKey;
-use std::{
-    io::{Write, stdin, stdout},
-    process,
-};
-use ticket_validator::ticket_lib::Ticket;
-use uuid::Uuid;
-
+use clap::Parser;
 use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
 
-#[derive(Parser)]
-#[command(
-    name = "Ticket Validation Cli",
-    version = "0.0.1",
-    about = "A tool to create and validate event tickets",
-    long_about = None
-)]
-struct TicketValidationCli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Creates a new ticket
-    Create { name: String, price: f32 },
-
-    /// Scans a ticket and burns it up if unsed
-    Scan { ticket_uuid: Uuid },
-}
+/// local import
+use ticket_validator::{
+    cli::{Commands, TicketValidationCli},
+    db::{create_ticket, scan_ticket},
+    ticket::Ticket,
+};
 
 fn main() {
     let cli = TicketValidationCli::parse();
@@ -84,66 +62,5 @@ fn main() {
                 Err(err) => eprintln!("{}\n\n", err),
             }
         }
-    }
-}
-
-fn create_ticket<'a>(
-    ticket: (Ticket, SigningKey),
-    db: &'a mut PickleDb,
-    key_db: &'a mut PickleDb,
-) -> Result<String, &'a str> {
-    // GIT: added checks to see if ticket exists before creation
-    if !db.exists(format!("{}", ticket.0.id).as_str()) {
-        if let Ok(()) = db.set(format!("{}", ticket.0.id).as_str(), &ticket.0) {
-            db.dump().unwrap();
-            if let Ok(()) = key_db.set(format!("{}", ticket.0.id).as_str(), &ticket.1) {
-                key_db.dump().unwrap();
-            } else {
-                return Err("\nCould not save Signing Key");
-            }
-
-            Ok(format!(
-                "\nTicket ID: {} Successfully Created!\n\n",
-                ticket.0.id
-            ))
-        } else {
-            Err("\nCould not save ticket")
-        }
-    } else {
-        Err("\nTicket with that id already exist!")
-    }
-}
-
-fn scan_ticket(ticket_uuid: Uuid, db: &mut PickleDb) -> Result<String, String> {
-    if let Some(ticket) = db.get::<Ticket>(
-        &ticket_uuid
-            .hyphenated()
-            .encode_lower(&mut Uuid::encode_buffer()),
-    ) {
-        let mut user_choice = String::new();
-
-        print!("\nDo you want to use the ticket? (y/n): ");
-        stdout().flush().unwrap();
-        stdin().read_line(&mut user_choice).unwrap();
-        // println!("you selected {user_choice}");
-
-        if user_choice.trim().to_lowercase() == "y" {
-            match ticket.burn_ticket() {
-                Ok(nticket) => {
-                    if let Ok(()) = db.set(format!("{}", nticket.id).as_str(), &nticket) {
-                        db.dump().unwrap();
-                        Ok("\nTicket Used Successfully!".to_string())
-                    } else {
-                        Err("\nError updating ticket".to_string())
-                    }
-                }
-                Err(err) => Err(format!("\nError updating ticket: {}", err)),
-            }
-        } else {
-            println!("\n\n\n");
-            process::exit(1);
-        }
-    } else {
-        Err("\nCould not retrieve ticket!".to_string())
     }
 }
