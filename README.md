@@ -16,8 +16,6 @@ The setup is done using cargo, you can also use the exe from the release , you'l
 - Store tickets with `pickledb`
 - Simple CLI commands: `create`, `scan`, `help`
 
----
-
 ## Tech Stack
 - **Language**: Rust
 - **Libraries**:
@@ -38,16 +36,6 @@ cargo run -- scan <ticket_id>
 
 
 ```
-
----
-
-## My Developer Roadmap
-This project is part of a four-month plan to grow into blockchain development:
-
-- **Month 1:** Rust Mastery → CLI ticket validator (this project)
-- **Month 2:** Solana Core → Anchor framework, PDAs, cNFTs (ticket minter for 100k seats)
-- **Month 3:** NEAR UX → Mobile-first ticketing app with FastAuth and meta-transactions
-- **Month 4:** Integration → Substrate + Octopus Network for cross-chain ticketing
 
 ---
 
@@ -76,5 +64,4 @@ This project is part of a four-month plan to grow into blockchain development:
   - **-h, --help**     Print help
   - **-V, --version**  Print version
 
----
 
