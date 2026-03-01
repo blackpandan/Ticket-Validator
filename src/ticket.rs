@@ -5,6 +5,8 @@ use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::errors::TicketError;
+
 #[derive(Serialize, Deserialize, Debug)]
 enum TicketStatus {
     Unused,
@@ -62,34 +64,39 @@ impl Ticket {
         )
     }
 
-    pub fn verify(&self) -> bool {
-        let verifying_key: VerifyingKey =
-            VerifyingKey::from_bytes(&self.public_key).expect("Error getting Public Key");
-        let signature: Signature =
-            Signature::try_from(self.signature).expect("Error getting Signature");
+    pub fn verify(&self) -> Result<bool, TicketError> {
+        let verifying_key: VerifyingKey = VerifyingKey::from_bytes(&self.public_key)
+            .map_err(|_err| TicketError::CryptoError("Error getting Public Key".to_string()))?;
+        let signature: Signature = Signature::try_from(self.signature)
+            .map_err(|_err| TicketError::CryptoError("Error getting Signature".to_string()))?;
         let message_string: String = format!("{}{}{}", self.id, self.price, self.event);
 
         match verifying_key.verify(message_string.as_bytes(), &signature) {
-            Ok(_) => true,
-            Err(_) => false,
+            Ok(_) => Ok(true),
+            Err(_) => Ok(false),
         }
     }
 
     pub fn burn_ticket(mut self) -> Result<Self, String> {
-        if self.verify() {
-            match self.status {
-                TicketStatus::Unused => {
-                    self.status = TicketStatus::Used;
-                    // Ok("ticket has been successfully burned".to_string())
-                    Ok(self)
-                }
-                TicketStatus::Used => Err("Ticket has already been used!".to_string()),
-                TicketStatus::Cancelled => {
-                    Err("Event has been cancelled. Ticket is invalid!".to_string())
+        match self.verify() {
+            Ok(value) => {
+                if value {
+                    match self.status {
+                        TicketStatus::Unused => {
+                            self.status = TicketStatus::Used;
+                            // Ok("ticket has been successfully burned".to_string())
+                            Ok(self)
+                        }
+                        TicketStatus::Used => Err("Ticket has already been used!".to_string()),
+                        TicketStatus::Cancelled => {
+                            Err("Event has been cancelled. Ticket is invalid!".to_string())
+                        }
+                    }
+                } else {
+                    Err("Ticket is invalid!".to_string())
                 }
             }
-        } else {
-            Err("Ticket is invalid!".to_string())
+            Err(err) => Err(format!("{}", err)),
         }
     }
 }
