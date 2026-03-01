@@ -18,25 +18,6 @@ The setup is done using cargo, you can also use the exe from the release , you'l
 
 ---
 
-## Usage with cargo
-**cargo run --** {COMMAND}
-
-
-## Usage with exe
-**ticket_validator.exe** {COMMAND}
-
-
-## Commmands
-  - **create**  Creates a new ticket
-  - **scan**    Scans a ticket and burns it up if unsed
-  - **help**    Print this message or the help of the given subcommand(s)
-
-## Options
-  - **-h, --help**     Print help
-  - **-V, --version**  Print version
-
----
-
 ## Tech Stack
 - **Language**: Rust
 - **Libraries**:
@@ -75,3 +56,25 @@ This project is part of a four-month plan to grow into blockchain development:
 - Applies cryptography concepts in a practical way
 - Sets the stage for blockchain integration
 - Shows my ability to learn quickly and apply concepts to working code
+
+---
+
+## Usage with cargo
+**cargo run --** {COMMAND}
+
+
+## Usage with exe
+**ticket_validator.exe** {COMMAND}
+
+
+## Commmands
+  - **create**  Creates a new ticket
+  - **scan**    Scans a ticket and burns it up if unsed
+  - **help**    Print this message or the help of the given subcommand(s)
+
+## Options
+  - **-h, --help**     Print help
+  - **-V, --version**  Print version
+
+---
+
