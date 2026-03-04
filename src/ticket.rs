@@ -1,5 +1,5 @@
 use ed25519_dalek::{
-    PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH, Signature, Signer, SigningKey, Verifier, VerifyingKey,
+    Signature, Signer, SigningKey, Verifier, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH,
 };
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::errors::TicketError;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 enum TicketStatus {
     Unused,
     Used,
@@ -97,6 +97,40 @@ impl Ticket {
                 }
             }
             Err(err) => Err(format!("{}", err)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    const EVENT: &str = "Passe Entrant";
+    const PRICE: f32 = 90.58;
+
+    #[test]
+    fn test_verify() {
+        let (new_ticket, _key): (Ticket, SigningKey) = Ticket::new(EVENT.to_string(), PRICE);
+        match new_ticket.verify() {
+            Ok(is_verified) => {
+                assert!(is_verified);
+            }
+            Err(_) => {
+                eprintln!("failed");
+            }
+        }
+    }
+
+    #[test]
+    fn test_burn_ticket() {
+        let (new_ticket, _key): (Ticket, SigningKey) = Ticket::new(EVENT.to_string(), PRICE);
+        match new_ticket.burn_ticket() {
+            Ok(tik) => {
+                assert_eq!(tik.status, TicketStatus::Used);
+            }
+            Err(err) => {
+                assert_eq!(err, "Ticket is invalid!".to_string())
+            }
         }
     }
 }
