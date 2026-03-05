@@ -111,14 +111,8 @@ mod test {
     #[test]
     fn test_verify() {
         let (new_ticket, _key): (Ticket, SigningKey) = Ticket::new(EVENT.to_string(), PRICE);
-        match new_ticket.verify() {
-            Ok(is_verified) => {
-                assert!(is_verified);
-            }
-            Err(_) => {
-                eprintln!("failed");
-            }
-        }
+        let nt_result: Result<bool, TicketError> = new_ticket.verify();
+        assert!(nt_result.is_ok_and(|is_verified| is_verified));
     }
 
     #[test]
