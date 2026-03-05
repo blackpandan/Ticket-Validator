@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::errors::TicketError;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 enum TicketStatus {
     Unused,
     Used,
@@ -25,7 +25,7 @@ enum TicketStatus {
 // 	location: String,
 // }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Ticket {
     // TODO-Done: use uuid for id
     // TODO-Done: use encrypted data for signature
