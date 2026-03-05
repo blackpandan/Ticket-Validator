@@ -82,3 +82,40 @@ pub fn scan_ticket(ticket_uuid: Uuid, db: &mut PickleDb) -> Result<String, Strin
         Err("\nCould not retrieve ticket!".to_string())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rstest::*;
+
+    const EVENT: &str = "Tested Event";
+    const PRICE: f32 = 345.00;
+
+    #[fixture]
+    fn db() -> PickleDb {
+        PickleDb::new(
+            "mem.db",
+            pickledb::PickleDbDumpPolicy::NeverDump,
+            pickledb::SerializationMethod::Json,
+        )
+    }
+
+    #[fixture]
+    fn key_db() -> PickleDb {
+        PickleDb::new(
+            "keymem.db",
+            pickledb::PickleDbDumpPolicy::NeverDump,
+            pickledb::SerializationMethod::Json,
+        )
+    }
+
+    #[rstest]
+    fn test_create_ticket(mut db: PickleDb, mut key_db: PickleDb) {
+        let ticket = Ticket::new(EVENT.to_string(), PRICE);
+        let ticket_id = ticket.0.id;
+        let r_ticket = create_ticket(ticket, &mut db, &mut key_db);
+        assert!(r_ticket.is_ok_and(|message| {
+            message == format!("\nTicket ID: {} Successfully Created!\n\n", ticket_id)
+        }));
+    }
+}
