@@ -4,13 +4,13 @@ use crate::ticket::Ticket;
 // External Imports
 use ed25519_dalek::SigningKey;
 use pickledb::PickleDb;
-use std::io::{Write, stdin, stdout};
+use std::io::{stdin, stdout, Write};
 use uuid::Uuid;
 
-pub fn create_ticket<'a>(
+pub fn create_ticket(
     ticket: (Ticket, SigningKey),
-    db: &'a mut PickleDb,
-    key_db: &'a mut PickleDb,
+    db: &mut PickleDb,
+    key_db: &mut PickleDb,
 ) -> Result<String, TicketError> {
     // GIT: added checks to see if ticket exists before creation
     if !db.exists(format!("{}", ticket.0.id).as_str()) {
