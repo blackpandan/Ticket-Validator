@@ -11,6 +11,7 @@ pickledb = "0.5.1"
 ed25519-dalek = { version = "2.2.0", features = ["rand_core", "serde"] }
 serde_bytes = "0.11.19"
 rand = { version = "0.8.5" }
+serial_test = "3.4.0"
 
 [dev-dependencies]
 rstest = "0.26.1"
