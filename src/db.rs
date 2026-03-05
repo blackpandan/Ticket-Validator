@@ -47,7 +47,7 @@ pub fn create_ticket(
 
 pub fn scan_ticket(ticket_uuid: Uuid, db: &mut PickleDb) -> Result<String, String> {
     if let Some(ticket) = db.get::<Ticket>(
-        &ticket_uuid
+        ticket_uuid
             .hyphenated()
             .encode_lower(&mut Uuid::encode_buffer()),
     ) {
