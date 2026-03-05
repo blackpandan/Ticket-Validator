@@ -1,5 +1,6 @@
 use clap::Parser;
 use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
+use std::io;
 
 /// local import
 use ticket_validator::{
@@ -55,7 +56,9 @@ fn main() {
 
         Commands::Scan { ticket_uuid } => {
             println!("'Ticket scanning started!' -> Ticket UUID: {ticket_uuid}");
-            let gotten_ticket = scan_ticket(*ticket_uuid, &mut db);
+            let stdin = io::stdin();
+            let stdout = io::stdout();
+            let gotten_ticket = scan_ticket(*ticket_uuid, &mut db, stdin.lock(), stdout);
 
             match gotten_ticket {
                 Ok(message) => println!("\n\nCOMPLETED: {}\n\n\n", message.trim()),

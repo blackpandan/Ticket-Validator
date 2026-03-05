@@ -4,7 +4,7 @@ use crate::ticket::Ticket;
 // External Imports
 use ed25519_dalek::SigningKey;
 use pickledb::PickleDb;
-use std::io::{stdin, stdout, Write};
+use std::io::{BufRead, Write};
 use uuid::Uuid;
 
 pub fn create_ticket(
@@ -45,7 +45,16 @@ pub fn create_ticket(
     }
 }
 
-pub fn scan_ticket(ticket_uuid: Uuid, db: &mut PickleDb) -> Result<String, String> {
+pub fn scan_ticket<R, W>(
+    ticket_uuid: Uuid,
+    db: &mut PickleDb,
+    mut reader: R,
+    mut writer: W,
+) -> Result<String, String>
+where
+    R: BufRead,
+    W: Write,
+{
     if let Some(ticket) = db.get::<Ticket>(
         ticket_uuid
             .hyphenated()
@@ -54,9 +63,13 @@ pub fn scan_ticket(ticket_uuid: Uuid, db: &mut PickleDb) -> Result<String, Strin
         let mut user_choice = String::new();
 
         'input: loop {
-            print!("\nDo you want to use the ticket? (y/n): ");
-            stdout().flush().unwrap();
-            stdin().read_line(&mut user_choice).unwrap();
+            write!(writer, "\nDo you want to use the ticket? (y/n): ")
+                .map_err(|_| "Write Error".to_string())?;
+            writer.flush().map_err(|_| "Flush Error".to_string())?;
+            user_choice.clear();
+            reader
+                .read_line(&mut user_choice)
+                .map_err(|_| "Read Error".to_string())?;
             // println!("you selected {user_choice}");
 
             if user_choice.trim().to_lowercase() == "y" {
@@ -73,7 +86,7 @@ pub fn scan_ticket(ticket_uuid: Uuid, db: &mut PickleDb) -> Result<String, Strin
                     Err(err) => return Err(format!("\nError updating ticket: {}", err)),
                 }
             } else if user_choice.trim().to_lowercase() == "n" {
-                println!("\n\n\n");
+                writeln!(writer, "\n\n\n").map_err(|_| "Write Error".to_string())?;
                 // std::process::exit(1);
                 break 'input Err("\nUser Exited CLI".to_string());
             }
@@ -87,17 +100,23 @@ pub fn scan_ticket(ticket_uuid: Uuid, db: &mut PickleDb) -> Result<String, Strin
 mod test {
     use super::*;
     use rstest::*;
+    use serial_test::serial;
+    use std::io;
 
     const EVENT: &str = "Tested Event";
     const PRICE: f32 = 345.00;
 
     #[fixture]
-    fn db() -> PickleDb {
-        PickleDb::new(
+    fn setup() -> (PickleDb, (Ticket, SigningKey)) {
+        let db = PickleDb::new(
             "mem.db",
             pickledb::PickleDbDumpPolicy::NeverDump,
             pickledb::SerializationMethod::Json,
-        )
+        );
+
+        let ticket = Ticket::new(EVENT.to_string(), PRICE);
+
+        (db, ticket)
     }
 
     #[fixture]
@@ -110,12 +129,41 @@ mod test {
     }
 
     #[rstest]
-    fn test_create_ticket(mut db: PickleDb, mut key_db: PickleDb) {
-        let ticket = Ticket::new(EVENT.to_string(), PRICE);
+    #[serial]
+    fn test_create_ticket(setup: (PickleDb, (Ticket, SigningKey)), mut key_db: PickleDb) {
+        let ticket: (Ticket, SigningKey) = setup.1.clone();
         let ticket_id = ticket.0.id;
-        let r_ticket = create_ticket(ticket, &mut db, &mut key_db);
+
+        let mut db = setup.0;
+
+        let r_ticket: Result<String, TicketError> = create_ticket(ticket, &mut db, &mut key_db);
         assert!(r_ticket.is_ok_and(|message| {
             message == format!("\nTicket ID: {} Successfully Created!\n\n", ticket_id)
         }));
+    }
+
+    #[rstest]
+    #[serial]
+    fn test_scan_ticket(setup: (PickleDb, (Ticket, SigningKey)), mut key_db: PickleDb) {
+        let ticket: (Ticket, SigningKey) = setup.1.clone();
+        let ticket_id: Uuid = setup.1 .0.id;
+        let mut db = setup.0;
+
+        // MOck INput for std
+        let input = "y\n".as_bytes();
+        let mut reader = io::Cursor::new(input);
+
+        //Mock output
+        let mut writer: Vec<u8> = Vec::new();
+
+        let c_ticket: Result<String, TicketError> = create_ticket(ticket, &mut db, &mut key_db);
+        assert!(c_ticket.is_ok_and(|message| {
+            message == format!("\nTicket ID: {} Successfully Created!\n\n", ticket_id)
+        }));
+
+        let s_ticket: Result<String, String> =
+            scan_ticket(ticket_id, &mut db, &mut reader, &mut writer);
+        println!("{:?}", s_ticket);
+        assert!(s_ticket.is_ok_and(|message| { message == "\nTicket Used Successfully!" }));
     }
 }
