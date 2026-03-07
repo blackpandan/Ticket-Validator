@@ -1,9 +1,7 @@
-use ed25519_dalek::{
-    Signature, Signer, SigningKey, Verifier, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH,
-};
-use hkdf::{Hkdf, InvalidLength};
+use ed25519_dalek::{Signature, Signer, SigningKey};
+use hkdf::Hkdf;
 use sha2::Sha256;
-use std::{env, fmt::format};
+use std::env;
 use uuid::Uuid;
 
 use crate::errors::TicketError;
@@ -39,13 +37,13 @@ fn generate_key(ticket_id: Uuid) -> Result<SigningKey, TicketError> {
     }
 }
 
-fn sign_message(message: &[u8], ticket_id: Uuid) -> Result<Signature, TicketError> {
+pub fn sign_message(message: &[u8], ticket_id: Uuid) -> Result<Signature, TicketError> {
     let signing_key: SigningKey = generate_key(ticket_id)?;
 
     Ok(signing_key.sign(message))
 }
 
-fn verify_signature(
+pub fn verify_signature(
     message: &[u8],
     signature: Signature,
     ticket_id: Uuid,
@@ -117,7 +115,6 @@ mod tests {
         let message_string: String = format!("{id}{price}{event}");
         let message: &[u8] = message_string.as_bytes();
 
-        //let public_key = signing_key.verifying_key().to_bytes();
         let signature = signing_key.sign(message);
         assert!(verify_signature(message, signature, id).is_ok_and(|is_verified| is_verified))
     }
