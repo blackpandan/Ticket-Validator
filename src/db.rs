@@ -10,7 +10,6 @@ use uuid::Uuid;
 pub fn create_ticket(
     ticket: (Ticket, SigningKey),
     db: &mut PickleDb,
-    key_db: &mut PickleDb,
 ) -> Result<String, TicketError> {
     // GIT: added checks to see if ticket exists before creation
     if !db.exists(format!("{}", ticket.0.id).as_str()) {
@@ -18,16 +17,6 @@ pub fn create_ticket(
             db.dump().map_err(|_err| {
                 TicketError::DatabaseError("\nCould not save ticket".to_string())
             })?;
-            key_db
-                .set(format!("{}", ticket.0.id).as_str(), &ticket.1)
-                .map_err(|_err| {
-                    TicketError::DatabaseError("\nCould not save private key".to_string())
-                })?;
-            key_db.dump().map_err(|_err| {
-                TicketError::DatabaseError("\nCould not save private key".to_string())
-            })?;
-
-            // return Err("\nCould not save Signing Key");
 
             Ok(format!(
                 "\nTicket ID: {} Successfully Created!\n\n",
@@ -119,24 +108,15 @@ mod test {
         (db, ticket)
     }
 
-    #[fixture]
-    fn key_db() -> PickleDb {
-        PickleDb::new(
-            "keymem.db",
-            pickledb::PickleDbDumpPolicy::NeverDump,
-            pickledb::SerializationMethod::Json,
-        )
-    }
-
     #[rstest]
     #[serial]
-    fn test_create_ticket(setup: (PickleDb, (Ticket, SigningKey)), mut key_db: PickleDb) {
+    fn test_create_ticket(setup: (PickleDb, (Ticket, SigningKey))) {
         let ticket: (Ticket, SigningKey) = setup.1.clone();
         let ticket_id = ticket.0.id;
 
         let mut db = setup.0;
 
-        let r_ticket: Result<String, TicketError> = create_ticket(ticket, &mut db, &mut key_db);
+        let r_ticket: Result<String, TicketError> = create_ticket(ticket, &mut db);
         assert!(r_ticket.is_ok_and(|message| {
             message == format!("\nTicket ID: {} Successfully Created!\n\n", ticket_id)
         }));
@@ -144,7 +124,7 @@ mod test {
 
     #[rstest]
     #[serial]
-    fn test_scan_ticket(setup: (PickleDb, (Ticket, SigningKey)), mut key_db: PickleDb) {
+    fn test_scan_ticket(setup: (PickleDb, (Ticket, SigningKey))) {
         let ticket: (Ticket, SigningKey) = setup.1.clone();
         let ticket_id: Uuid = setup.1 .0.id;
         let mut db = setup.0;
@@ -156,7 +136,7 @@ mod test {
         //Mock output
         let mut writer: Vec<u8> = Vec::new();
 
-        let c_ticket: Result<String, TicketError> = create_ticket(ticket, &mut db, &mut key_db);
+        let c_ticket: Result<String, TicketError> = create_ticket(ticket, &mut db);
         assert!(c_ticket.is_ok_and(|message| {
             message == format!("\nTicket ID: {} Successfully Created!\n\n", ticket_id)
         }));

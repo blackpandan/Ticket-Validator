@@ -2,7 +2,7 @@ use clap::Parser;
 use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
 use std::io;
 
-/// local import
+// local import
 use ticket_validator::{
     cli::{Commands, TicketValidationCli},
     db::{create_ticket, scan_ticket},
@@ -24,19 +24,6 @@ fn main() {
         ),
     };
 
-    let mut key_db = match PickleDb::load(
-        "keys.db",
-        PickleDbDumpPolicy::DumpUponRequest,
-        SerializationMethod::Json,
-    ) {
-        Ok(existing_db) => existing_db,
-        Err(_) => PickleDb::new(
-            "keys.db",
-            PickleDbDumpPolicy::DumpUponRequest,
-            SerializationMethod::Json,
-        ),
-    };
-
     println!("\n\n-------------------------------------------------------------------------");
     println!("\n    TICKET VALIDATOR");
     println!("\n--------------------------------------------------------------------------\n\n");
@@ -46,7 +33,7 @@ fn main() {
             println!("'Creating Ticket!' -> Ticket {{ name: {name}, price: {price} }}");
             let new_ticket = Ticket::new(name.clone(), *price);
 
-            let new_ticket = create_ticket(new_ticket, &mut db, &mut key_db);
+            let new_ticket = create_ticket(new_ticket, &mut db);
 
             match new_ticket {
                 Ok(success_message) => println!("{success_message}\n\n"),
