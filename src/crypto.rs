@@ -4,7 +4,7 @@ use ed25519_dalek::{
 
 use crate::errors::TicketError;
 
-fn sign_message(message: &[u8]) -> Result<[u8; SIGNATURE_LENGTH], TicketError> {
+fn sign_message(message: &[u8]) -> Result<Signature, TicketError> {
     Err(TicketError::CryptoError("unimplemented!()".into()))
 }
 
@@ -37,10 +37,8 @@ mod tests {
                 panic!();
             }
         };
-        println!("{:?}", ms_kv);
 
         let info = format!("ticket-id:{}", id);
-        println!("info: {}", &info);
 
         let hk = Hkdf::<Sha256>::new(Some("ticket-validator-v1".as_bytes()), ms_kv.as_bytes());
         let mut okm: [u8; 32] = [0u8; 32];
@@ -54,9 +52,13 @@ mod tests {
 
     #[rstest]
     #[serial]
-    fn test_sign_message() {
+    fn test_sign_message(setup: (Uuid, SigningKey)) {
+        let (_id, signing_key) = setup;
         let message: &[u8] = "this is a test message".as_bytes();
-        assert!(sign_message(message).is_ok())
+
+        let test_signed: Signature = signing_key.sign(message);
+
+        assert!(sign_message(message).is_ok_and(|signed| signed == test_signed));
     }
 
     #[rstest]

@@ -163,7 +163,6 @@ mod test {
 
         let s_ticket: Result<String, String> =
             scan_ticket(ticket_id, &mut db, &mut reader, &mut writer);
-        println!("{:?}", s_ticket);
         assert!(s_ticket.is_ok_and(|message| { message == "\nTicket Used Successfully!" }));
     }
 }
