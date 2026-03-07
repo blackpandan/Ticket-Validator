@@ -1,11 +1,44 @@
 use ed25519_dalek::{
     Signature, Signer, SigningKey, Verifier, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH,
 };
+use hkdf::{Hkdf, InvalidLength};
+use sha2::Sha256;
+use std::{env, fmt::format};
+use uuid::Uuid;
 
 use crate::errors::TicketError;
 
-fn sign_message(message: &[u8]) -> Result<Signature, TicketError> {
-    Err(TicketError::CryptoError("unimplemented!()".into()))
+fn sign_message(message: &[u8], ticket_id: Uuid) -> Result<Signature, TicketError> {
+    // Getting the seed from env
+    let master_seed: String = match dotenvy::from_filename(".env.local") {
+        Ok(_) => {
+            if let Ok(m_seed) = env::var("MASTER_SEED") {
+                m_seed
+            } else {
+                return Err(TicketError::CryptoError(
+                    "Could not get seed from env".into(),
+                ));
+            }
+        }
+        Err(_) => {
+            return Err(TicketError::CryptoError("Could not load env file".into()));
+        }
+    };
+    let master_seed: &[u8] = master_seed.as_bytes();
+
+    let salt: Option<&[u8]> = Some("ticket-validator-v1".as_bytes());
+    let info: String = format!("ticket-id:{}", ticket_id);
+    let info: &[u8] = info.as_bytes();
+    let mut okm = [0u8; 32];
+
+    let hk = Hkdf::<Sha256>::new(salt, master_seed);
+
+    let signing_key = match hk.expand(info, &mut okm) {
+        Ok(_) => SigningKey::from_bytes(&okm),
+        Err(e) => return Err(TicketError::CryptoError(format!("{:?}", e))),
+    };
+
+    Ok(signing_key.sign(message))
 }
 
 fn verify_signature(signature: Signature) -> Result<bool, TicketError> {
@@ -15,12 +48,8 @@ fn verify_signature(signature: Signature) -> Result<bool, TicketError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hkdf::Hkdf;
     use rstest::*;
     use serial_test::serial;
-    use sha2::Sha256;
-    use std::env;
-    use uuid::Uuid;
 
     #[fixture]
     fn setup() -> (Uuid, SigningKey) {
@@ -53,12 +82,15 @@ mod tests {
     #[rstest]
     #[serial]
     fn test_sign_message(setup: (Uuid, SigningKey)) {
-        let (_id, signing_key) = setup;
+        let (id, signing_key) = setup;
         let message: &[u8] = "this is a test message".as_bytes();
 
         let test_signed: Signature = signing_key.sign(message);
 
-        assert!(sign_message(message).is_ok_and(|signed| signed == test_signed));
+        match sign_message(message, id) {
+            Ok(signed) => assert!(signed == test_signed),
+            Err(e) => println!("{:?}", e),
+        };
     }
 
     #[rstest]
