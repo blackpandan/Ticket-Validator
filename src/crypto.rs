@@ -8,7 +8,7 @@ use crate::errors::TicketError;
 
 pub fn generate_key(ticket_id: Uuid) -> Result<SigningKey, TicketError> {
     // Getting the seed from env
-    let master_seed: String = match dotenvy::from_filename(".env.local") {
+    let master_seed: String = match dotenvy::dotenv() {
         Ok(_) => {
             if let Ok(m_seed) = env::var("MASTER_SEED") {
                 m_seed
@@ -67,7 +67,7 @@ mod tests {
     fn setup() -> (Uuid, SigningKey) {
         let id: Uuid = Uuid::new_v4();
 
-        dotenvy::from_filename(".env.local").expect("Could not load env file");
+        dotenvy::dotenv().expect("Could not load env file");
 
         let env_kv = env::var("MASTER_SEED");
 
