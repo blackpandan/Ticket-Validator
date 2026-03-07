@@ -11,7 +11,8 @@ The setup is done using cargo, you can also use the exe from the release , you'l
 
 ## Features
 - Create tickets with unique UUIDs
-- Sign and verify tickets using `ed25519-dalek`
+- generation of SigningKey deterministically
+- Sign and verify tickets using master_seed(32 bytes) -> `Hdkf` -> seed(32 bytes) -> `ed25519-dalek` -> key/pair
 - Validate tickets once and burn them after scanning
 - Store tickets with `pickledb`
 - Simple CLI commands: `create`, `scan`, `help`
@@ -20,19 +21,29 @@ The setup is done using cargo, you can also use the exe from the release , you'l
 - **Language**: Rust
 - **Libraries**:
   - [`uuid`](https://docs.rs/uuid/) for ticket IDs
+  - [`hdkf`](https://crates.io/crates/hkdf) / [`sha2`](https://crates.io/crates/sha2) for generating seed from master_seed
   - [`ed25519-dalek`](https://docs.rs/ed25519-dalek/) for signing
   - [`pickledb`](https://crates.io/crates/pickledb) for storage
   - [`clap`](https://docs.rs/clap/) for CLI parsing
 
 ---
 
+## Sample Commands Usage
+```bash
+# Create a new ticket
+cargo run -- create "<Event_Name>" <Price>
+
+#Scan a ticket/ Use a ticket
+cargo run -- scan <ticket_uuid>
+```
+
 ## Example Usage
 ```bash
 # Create a new ticket
-cargo run -- create "Concert"
+cargo run -- create "Test Event" 500.00
 
 # Scan a ticket
-cargo run -- scan <ticket_id>
+cargo run -- scan 886e447c-1adf-4d9e-84e5-92348344f759
 
 
 ```
@@ -56,9 +67,9 @@ cargo run -- scan <ticket_id>
 
 
 ## Commmands
-  - **create**  Creates a new ticket
-  - **scan**    Scans a ticket and burns it up if unsed
-  - **help**    Print this message or the help of the given subcommand(s)
+  - **create**  `<event_name> <price>` -> Creates a new ticket
+  - **scan**    `<ticket_uuid>` Scans a ticket and burns it up if unsed
+  - **help**    `<command_name:optional>` Print this message or the help of the given subcommand(s)
 
 ## Options
   - **-h, --help**     Print help
