@@ -8,6 +8,10 @@ fn sign_message(message: &[u8]) -> Result<[u8; SIGNATURE_LENGTH], TicketError> {
     Err(TicketError::CryptoError("unimplemented!()".into()))
 }
 
+fn verify_signature(signature: Signature) -> Result<bool, TicketError> {
+    Err(TicketError::CryptoError("unimplemented!()".into()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -53,5 +57,20 @@ mod tests {
     fn test_sign_message() {
         let message: &[u8] = "this is a test message".as_bytes();
         assert!(sign_message(message).is_ok())
+    }
+
+    #[rstest]
+    #[serial]
+    fn test_verify_message(setup: (Uuid, SigningKey)) {
+        let (id, signing_key) = setup;
+
+        let price: f32 = 500.43;
+        let event: &str = "Tested Event";
+        let message_string: String = format!("{id}{price}{event}");
+        let message: &[u8] = message_string.as_bytes();
+
+        //let public_key = signing_key.verifying_key().to_bytes();
+        let signature = signing_key.sign(message);
+        assert!(verify_signature(signature).is_ok_and(|is_verified| is_verified))
     }
 }
