@@ -40,13 +40,23 @@ fn generate_key(ticket_id: Uuid) -> Result<SigningKey, TicketError> {
 }
 
 fn sign_message(message: &[u8], ticket_id: Uuid) -> Result<Signature, TicketError> {
-    let signing_key = generate_key(ticket_id)?;
+    let signing_key: SigningKey = generate_key(ticket_id)?;
 
     Ok(signing_key.sign(message))
 }
 
-fn verify_signature(signature: Signature) -> Result<bool, TicketError> {
-    Err(TicketError::CryptoError("unimplemented!()".into()))
+fn verify_signature(
+    message: &[u8],
+    signature: Signature,
+    ticket_id: Uuid,
+) -> Result<bool, TicketError> {
+    let signing_key: SigningKey = generate_key(ticket_id)?;
+
+    if signing_key.verify(message, &signature).is_ok() {
+        Ok(true)
+    } else {
+        Err(TicketError::CryptoError("Error Verifying Key".into()))
+    }
 }
 
 #[cfg(test)]
@@ -109,6 +119,6 @@ mod tests {
 
         //let public_key = signing_key.verifying_key().to_bytes();
         let signature = signing_key.sign(message);
-        assert!(verify_signature(signature).is_ok_and(|is_verified| is_verified))
+        assert!(verify_signature(message, signature, id).is_ok_and(|is_verified| is_verified))
     }
 }
