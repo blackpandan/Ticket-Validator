@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::errors::TicketError;
 
-fn sign_message(message: &[u8], ticket_id: Uuid) -> Result<Signature, TicketError> {
+fn generate_key(ticket_id: Uuid) -> Result<SigningKey, TicketError> {
     // Getting the seed from env
     let master_seed: String = match dotenvy::from_filename(".env.local") {
         Ok(_) => {
@@ -33,10 +33,14 @@ fn sign_message(message: &[u8], ticket_id: Uuid) -> Result<Signature, TicketErro
 
     let hk = Hkdf::<Sha256>::new(salt, master_seed);
 
-    let signing_key = match hk.expand(info, &mut okm) {
-        Ok(_) => SigningKey::from_bytes(&okm),
-        Err(e) => return Err(TicketError::CryptoError(format!("{:?}", e))),
-    };
+    match hk.expand(info, &mut okm) {
+        Ok(_) => Ok(SigningKey::from_bytes(&okm)),
+        Err(e) => Err(TicketError::CryptoError(format!("{:?}", e))),
+    }
+}
+
+fn sign_message(message: &[u8], ticket_id: Uuid) -> Result<Signature, TicketError> {
+    let signing_key = generate_key(ticket_id)?;
 
     Ok(signing_key.sign(message))
 }
