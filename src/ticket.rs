@@ -1,7 +1,5 @@
-use ed25519_dalek::{
-    Signature, Signer, SigningKey, Verifier, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH,
-};
-use rand::rngs::OsRng;
+use crate::crypto;
+use ed25519_dalek::{Signer, SigningKey, SIGNATURE_LENGTH};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -34,51 +32,46 @@ pub struct Ticket {
     pub event: String,
     pub price: f32,
     status: TicketStatus,
-    pub public_key: [u8; PUBLIC_KEY_LENGTH],
+    //pub public_key: [u8; PUBLIC_KEY_LENGTH],
     #[serde(with = "serde_bytes")]
     signature: [u8; SIGNATURE_LENGTH],
 }
 
 impl Ticket {
-    pub fn new(event: String, price: f32) -> (Self, SigningKey) {
+    pub fn try_new(event: String, price: f32) -> Result<Self, TicketError> {
         let id: Uuid = Uuid::new_v4();
+        let signing_key: SigningKey = crypto::generate_key(id)?;
 
-        let mut csprng = OsRng;
-        let signing_key: SigningKey = SigningKey::generate(&mut csprng);
         let message_string: String = format!("{id}{price}{event}");
         let message: &[u8] = message_string.as_bytes();
 
-        let public_key = signing_key.verifying_key().to_bytes();
         let signature = signing_key.sign(message).to_bytes();
 
-        (
-            Self {
-                id,
-                event,
-                price,
-                status: TicketStatus::Unused,
-                public_key,
-                signature,
-            },
-            signing_key,
-        )
+        Ok(Self {
+            id,
+            event,
+            price,
+            status: TicketStatus::Unused,
+            signature,
+        })
     }
 
     pub fn verify(&self) -> Result<bool, TicketError> {
-        let verifying_key: VerifyingKey = VerifyingKey::from_bytes(&self.public_key)
-            .map_err(|_err| TicketError::CryptoError("Error getting Public Key".to_string()))?;
-        let signature: Signature = Signature::try_from(self.signature)
-            .map_err(|_err| TicketError::CryptoError("Error getting Signature".to_string()))?;
-        let message_string: String = format!("{}{}{}", self.id, self.price, self.event);
+        //    let verifying_key: VerifyingKey = VerifyingKey::from_bytes(&self.public_key)
+        //        .map_err(|_err| TicketError::CryptoError("Error getting Public Key".to_string()))?;
+        //    let signature: Signature = Signature::from_bytes(&self.signature);
+        //    let message_string: String = format!("{}{}{}", self.id, self.price, self.event);
+        //
 
-        match verifying_key.verify(message_string.as_bytes(), &signature) {
-            Ok(_) => Ok(true),
-            Err(_) => Ok(false),
-        }
+        let message: String = format!("{}{}{}", self.id, self.price, self.event);
+        let message: &[u8] = message.as_bytes();
+        crypto::verify_signature(message, self.signature.into(), self.id)
     }
 
     pub fn burn_ticket(mut self) -> Result<Self, String> {
-        match self.verify() {
+        let message: String = format!("{}{}{}", self.id, self.price, self.event);
+        let message: &[u8] = message.as_bytes();
+        match crypto::verify_signature(message, self.signature.into(), self.id) {
             Ok(value) => {
                 if value {
                     match self.status {
@@ -110,14 +103,16 @@ mod test {
 
     #[test]
     fn test_verify() {
-        let (new_ticket, _key): (Ticket, SigningKey) = Ticket::new(EVENT.to_string(), PRICE);
+        let new_ticket: Ticket =
+            Ticket::try_new(EVENT.to_string(), PRICE).expect("Error Creating Ticket");
         let nt_result: Result<bool, TicketError> = new_ticket.verify();
         assert!(nt_result.is_ok_and(|is_verified| is_verified));
     }
 
     #[test]
     fn test_burn_ticket() {
-        let (new_ticket, _key): (Ticket, SigningKey) = Ticket::new(EVENT.to_string(), PRICE);
+        let new_ticket: Ticket =
+            Ticket::try_new(EVENT.to_string(), PRICE).expect("Error Creating Ticket");
         match new_ticket.burn_ticket() {
             Ok(tik) => {
                 assert_eq!(tik.status, TicketStatus::Used);

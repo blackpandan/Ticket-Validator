@@ -1,11 +1,12 @@
 use clap::Parser;
 use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
-use std::io;
+use std::{io, process};
 
 // local import
 use ticket_validator::{
     cli::{Commands, TicketValidationCli},
     db::{create_ticket, scan_ticket},
+    errors::TicketError,
     ticket::Ticket,
 };
 
@@ -31,9 +32,18 @@ fn main() {
     match &cli.command {
         Commands::Create { name, price } => {
             println!("'Creating Ticket!' -> Ticket {{ name: {name}, price: {price} }}");
-            let new_ticket = Ticket::new(name.clone(), *price);
+            let new_ticket: Ticket = match Ticket::try_new(name.clone(), *price) {
+                Ok(ticket) => {
+                    println!("Ticket Successfully Created\n\n");
+                    ticket
+                }
+                Err(error_message) => {
+                    eprintln!("{error_message}\n\n");
+                    process::exit(1);
+                }
+            };
 
-            let new_ticket = create_ticket(new_ticket, &mut db);
+            let new_ticket: Result<String, TicketError> = create_ticket(new_ticket, &mut db);
 
             match new_ticket {
                 Ok(success_message) => println!("{success_message}\n\n"),

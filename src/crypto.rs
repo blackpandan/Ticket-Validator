@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::errors::TicketError;
 
-fn generate_key(ticket_id: Uuid) -> Result<SigningKey, TicketError> {
+pub fn generate_key(ticket_id: Uuid) -> Result<SigningKey, TicketError> {
     // Getting the seed from env
     let master_seed: String = match dotenvy::from_filename(".env.local") {
         Ok(_) => {

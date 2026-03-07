@@ -2,25 +2,21 @@ use crate::errors::TicketError;
 use crate::ticket::Ticket;
 
 // External Imports
-use ed25519_dalek::SigningKey;
 use pickledb::PickleDb;
 use std::io::{BufRead, Write};
 use uuid::Uuid;
 
-pub fn create_ticket(
-    ticket: (Ticket, SigningKey),
-    db: &mut PickleDb,
-) -> Result<String, TicketError> {
+pub fn create_ticket(ticket: Ticket, db: &mut PickleDb) -> Result<String, TicketError> {
     // GIT: added checks to see if ticket exists before creation
-    if !db.exists(format!("{}", ticket.0.id).as_str()) {
-        if let Ok(()) = db.set(format!("{}", ticket.0.id).as_str(), &ticket.0) {
+    if !db.exists(format!("{}", ticket.id).as_str()) {
+        if let Ok(()) = db.set(format!("{}", ticket.id).as_str(), &ticket) {
             db.dump().map_err(|_err| {
                 TicketError::DatabaseError("\nCould not save ticket".to_string())
             })?;
 
             Ok(format!(
                 "\nTicket ID: {} Successfully Created!\n\n",
-                ticket.0.id
+                ticket.id
             ))
         } else {
             Err(TicketError::DatabaseError(
@@ -96,23 +92,23 @@ mod test {
     const PRICE: f32 = 345.00;
 
     #[fixture]
-    fn setup() -> (PickleDb, (Ticket, SigningKey)) {
+    fn setup() -> (PickleDb, Ticket) {
         let db = PickleDb::new(
             "mem.db",
             pickledb::PickleDbDumpPolicy::NeverDump,
             pickledb::SerializationMethod::Json,
         );
 
-        let ticket = Ticket::new(EVENT.to_string(), PRICE);
+        let ticket = Ticket::try_new(EVENT.to_string(), PRICE).expect("error creating ticket");
 
         (db, ticket)
     }
 
     #[rstest]
     #[serial]
-    fn test_create_ticket(setup: (PickleDb, (Ticket, SigningKey))) {
-        let ticket: (Ticket, SigningKey) = setup.1.clone();
-        let ticket_id = ticket.0.id;
+    fn test_create_ticket(setup: (PickleDb, Ticket)) {
+        let ticket: Ticket = setup.1.clone();
+        let ticket_id = ticket.id;
 
         let mut db = setup.0;
 
@@ -124,9 +120,9 @@ mod test {
 
     #[rstest]
     #[serial]
-    fn test_scan_ticket(setup: (PickleDb, (Ticket, SigningKey))) {
-        let ticket: (Ticket, SigningKey) = setup.1.clone();
-        let ticket_id: Uuid = setup.1 .0.id;
+    fn test_scan_ticket(setup: (PickleDb, Ticket)) {
+        let ticket: Ticket = setup.1.clone();
+        let ticket_id: Uuid = ticket.id;
         let mut db = setup.0;
 
         // MOck INput for std
