@@ -29,6 +29,12 @@ The setup is done using cargo, you can also use the exe from the release , you'l
 ---
 
 ## Sample Commands Usage
+Ensure to create a .env file with key `MASTER_SEED` containing your 32 byte seed
+**Example**
+```env
+MASTER_KEY="[125,213,213,143,89,111]"
+```
+
 ```bash
 # Create a new ticket
 cargo run -- create "<Event_Name>" <Price>
