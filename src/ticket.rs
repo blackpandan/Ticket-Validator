@@ -1,9 +1,11 @@
+use std::str::FromStr;
+
 use crate::crypto;
 use ed25519_dalek::{Signer, SigningKey, SIGNATURE_LENGTH};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::errors::TicketError;
+use crate::{errors::TicketError, price::Price};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 enum TicketStatus {
@@ -30,7 +32,7 @@ pub struct Ticket {
     // TODO: use uuid for event or Event Struct called by uuid
     pub id: Uuid,
     pub event: String,
-    pub price: f32,
+    pub price: Price,
     status: TicketStatus,
     //pub public_key: [u8; PUBLIC_KEY_LENGTH],
     #[serde(with = "serde_bytes")]
@@ -38,7 +40,9 @@ pub struct Ticket {
 }
 
 impl Ticket {
-    pub fn try_new(event: String, price: f32) -> Result<Self, TicketError> {
+    pub fn try_new(event: String, price_str: String) -> Result<Self, TicketError> {
+        let price: Price = Price::from_str(&price_str)?;
+
         let id: Uuid = Uuid::new_v4();
         let signing_key: SigningKey = crypto::generate_key(id)?;
 
@@ -99,12 +103,12 @@ mod test {
 
     use super::*;
     const EVENT: &str = "Passe Entrant";
-    const PRICE: f32 = 90.58;
+    const PRICE: &str = "90.58";
 
     #[test]
     fn test_verify() {
         let new_ticket: Ticket =
-            Ticket::try_new(EVENT.to_string(), PRICE).expect("Error Creating Ticket");
+            Ticket::try_new(EVENT.to_string(), PRICE.into()).expect("Error Creating Ticket");
         let nt_result: Result<bool, TicketError> = new_ticket.verify();
         assert!(nt_result.is_ok_and(|is_verified| is_verified));
     }
@@ -112,7 +116,7 @@ mod test {
     #[test]
     fn test_burn_ticket() {
         let new_ticket: Ticket =
-            Ticket::try_new(EVENT.to_string(), PRICE).expect("Error Creating Ticket");
+            Ticket::try_new(EVENT.to_string(), PRICE.into()).expect("Error Creating Ticket");
         match new_ticket.burn_ticket() {
             Ok(tik) => {
                 assert_eq!(tik.status, TicketStatus::Used);

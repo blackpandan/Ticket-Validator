@@ -5,11 +5,12 @@ use std::{
 };
 
 use crate::errors::TicketError;
+use serde::{Deserialize, Serialize};
 
 const SCALE: u128 = 1_000;
 const SCALE_DECIMAL: u32 = 3;
 
-fn str_parser(value: &str) -> Result<u128, TicketError> {
+pub fn price_parser(value: &str) -> Result<u128, TicketError> {
     let (whole, frac) = value.split_once(".").unwrap_or((value, "0"));
 
     let frac_length = frac.len() as u32;
@@ -47,7 +48,7 @@ fn str_parser(value: &str) -> Result<u128, TicketError> {
     Ok(value)
 }
 
-#[derive(Debug, Clone, Copy, PartialOrd, Ord)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialOrd, Ord)]
 pub struct Price {
     value: u128,
 }
@@ -55,7 +56,7 @@ pub struct Price {
 impl FromStr for Price {
     type Err = TicketError;
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let value: u128 = str_parser(value)?;
+        let value: u128 = price_parser(value)?;
         Ok(Self { value })
     }
 }
@@ -174,7 +175,7 @@ impl PartialEq for Price {
 
 impl PartialEq<&str> for Price {
     fn eq(&self, other: &&str) -> bool {
-        let value = match str_parser(other) {
+        let value = match price_parser(other) {
             Ok(val) => val,
             Err(err) => panic!("{}", err),
         };

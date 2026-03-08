@@ -32,7 +32,7 @@ fn main() {
     match &cli.command {
         Commands::Create { name, price } => {
             println!("'Creating Ticket!' -> Ticket {{ name: {name}, price: {price} }}");
-            let new_ticket: Ticket = match Ticket::try_new(name.clone(), *price) {
+            let new_ticket: Ticket = match Ticket::try_new(name.into(), price.into()) {
                 Ok(ticket) => {
                     println!("Ticket Successfully Created\n\n");
                     ticket

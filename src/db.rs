@@ -89,7 +89,7 @@ mod test {
     use std::io;
 
     const EVENT: &str = "Tested Event";
-    const PRICE: f32 = 345.00;
+    const PRICE: &str = "345.00";
 
     #[fixture]
     fn setup() -> (PickleDb, Ticket) {
@@ -99,7 +99,8 @@ mod test {
             pickledb::SerializationMethod::Json,
         );
 
-        let ticket = Ticket::try_new(EVENT.to_string(), PRICE).expect("error creating ticket");
+        let ticket =
+            Ticket::try_new(EVENT.to_string(), PRICE.into()).expect("error creating ticket");
 
         (db, ticket)
     }

@@ -16,7 +16,7 @@ pub struct TicketValidationCli {
 #[derive(Subcommand)]
 pub enum Commands {
     /// Creates a new ticket
-    Create { name: String, price: f32 },
+    Create { name: String, price: String },
 
     /// Scans a ticket and burns it up if unsed
     Scan { ticket_uuid: Uuid },
