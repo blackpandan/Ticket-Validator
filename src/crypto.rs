@@ -50,15 +50,20 @@ pub fn verify_signature(
 ) -> Result<bool, TicketError> {
     let signing_key: SigningKey = generate_key(ticket_id)?;
 
-    if signing_key.verify(message, &signature).is_ok() {
-        Ok(true)
-    } else {
-        Err(TicketError::CryptoError("Error Verifying Key".into()))
+    match signing_key.verify(message, &signature) {
+        Ok(_) => Ok(true),
+        Err(err) => Err(TicketError::CryptoError(format!(
+            "Error Verifying Key -> {}",
+            err
+        ))),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{event::Event, price::Price};
+    use std::str::FromStr;
+
     use super::*;
     use rstest::*;
     use serial_test::serial;
@@ -110,12 +115,29 @@ mod tests {
     fn test_verify_message(setup: (Uuid, SigningKey)) {
         let (id, signing_key) = setup;
 
-        let price: f32 = 500.43;
-        let event: &str = "Tested Event";
+        let price: Price = match Price::from_str("500.43") {
+            Ok(price) => price,
+            Err(err) => {
+                eprintln!("{}", err);
+                panic!()
+            }
+        };
+        let event: Event = Event {
+            name: "Tested Event".into(),
+            venue: "earth-moon, milkyway".into(),
+        };
         let message_string: String = format!("{id}{price}{event}");
         let message: &[u8] = message_string.as_bytes();
 
         let signature = signing_key.sign(message);
-        assert!(verify_signature(message, signature, id).is_ok_and(|is_verified| is_verified))
+        //assert!(verify_signature(message, signature, id).is_ok_and(|is_verified| is_verified))
+        match verify_signature(message, signature, id) {
+            Ok(is_verified) => assert!(is_verified),
+            Err(err) => {
+                println!("{}", err);
+                panic!()
+            }
+        }
+        //assert!(verify_signature(message, signature, id).is_ok_and(|is_verified| is_verified))
     }
 }
