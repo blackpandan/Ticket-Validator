@@ -192,7 +192,7 @@ mod tests {
 
     #[fixture]
     fn price() -> Price {
-        Price::from_str("400.00").unwrap()
+        Price::from_str("400.00").expect("Error Creating Ticket")
     }
 
     #[rstest]

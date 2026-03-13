@@ -30,9 +30,12 @@ fn main() {
     println!("\n--------------------------------------------------------------------------\n\n");
 
     match &cli.command {
-        Commands::Create { name, price } => {
-            println!("'Creating Ticket!' -> Ticket {{ name: {name}, price: {price} }}");
-            let new_ticket: Ticket = match Ticket::try_new(name.into(), price.into()) {
+        Commands::Create { name, price, venue } => {
+            println!(
+                "'Creating Ticket!' -> Ticket {{ name: {name}, price: {price}, venue: {venue} }}"
+            );
+            let new_ticket: Ticket = match Ticket::try_new(name.into(), price.into(), venue.into())
+            {
                 Ok(ticket) => {
                     println!("Ticket Successfully Created\n\n");
                     ticket
