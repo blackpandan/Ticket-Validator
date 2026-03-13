@@ -35,7 +35,7 @@ pub fn scan_ticket<R, W>(
     db: &mut PickleDb,
     mut reader: R,
     mut writer: W,
-) -> Result<String, String>
+) -> Result<String, TicketError>
 where
     R: BufRead,
     W: Write,
@@ -49,35 +49,53 @@ where
 
         'input: loop {
             write!(writer, "\nDo you want to use the ticket? (y/n): ")
-                .map_err(|_| "Write Error".to_string())?;
-            writer.flush().map_err(|_| "Flush Error".to_string())?;
+                .map_err(|err| TicketError::DatabaseError(format!("Write Error -> {}", err)))?;
+            writer.flush().map_err(|err| {
+                TicketError::DatabaseError(format!("User Input Error -> {}", err))
+            })?;
             user_choice.clear();
             reader
                 .read_line(&mut user_choice)
-                .map_err(|_| "Read Error".to_string())?;
+                .map_err(|err| TicketError::DatabaseError(format!("Read Error: {}", err)))?;
             // println!("you selected {user_choice}");
 
             if user_choice.trim().to_lowercase() == "y" {
                 match ticket.burn_ticket() {
-                    Ok(nticket) => {
-                        if let Ok(()) = db.set(format!("{}", nticket.id).as_str(), &nticket) {
-                            db.dump()
-                                .map_err(|_err| "\nError saving database".to_string())?;
+                    Ok(nticket) => match db.set(format!("{}", nticket.id).as_str(), &nticket) {
+                        Ok(()) => {
+                            db.dump().map_err(|err| {
+                                TicketError::DatabaseError(format!(
+                                    "\nError saving database -> {}",
+                                    err
+                                ))
+                            })?;
                             return Ok("\nTicket Used Successfully!".to_string());
-                        } else {
-                            return Err("\nError updating ticket".to_string());
                         }
+                        Err(err) => {
+                            return Err(TicketError::DatabaseError(format!(
+                                "\nError updating ticket -> {}",
+                                err
+                            )))
+                        }
+                    },
+                    Err(err) => {
+                        return Err(TicketError::DatabaseError(format!(
+                            "\nError updating ticket: {}",
+                            err
+                        )))
                     }
-                    Err(err) => return Err(format!("\nError updating ticket: {}", err)),
                 }
             } else if user_choice.trim().to_lowercase() == "n" {
-                writeln!(writer, "\n\n\n").map_err(|_| "Write Error".to_string())?;
+                writeln!(writer, "\n\n\n")
+                    .map_err(|err| TicketError::DatabaseError(format!("Write Error -> {}", err)))?;
                 // std::process::exit(1);
-                break 'input Err("\nUser Exited CLI".to_string());
+                break 'input Err(TicketError::DatabaseError("\nUser Exited CLI".to_string()));
             }
         }
     } else {
-        Err("\nCould not retrieve ticket!".to_string())
+        Err(TicketError::DatabaseError(
+            "\nCould not retrieve ticket!".to_string(),
+        ))
     }
 }
 
@@ -90,6 +108,7 @@ mod test {
 
     const EVENT: &str = "Tested Event";
     const PRICE: &str = "345.00";
+    const VENUE: &str = "earth-moon, milkyway";
 
     #[fixture]
     fn setup() -> (PickleDb, Ticket) {
@@ -99,8 +118,8 @@ mod test {
             pickledb::SerializationMethod::Json,
         );
 
-        let ticket =
-            Ticket::try_new(EVENT.to_string(), PRICE.into()).expect("error creating ticket");
+        let ticket = Ticket::try_new(EVENT.to_string(), PRICE.into(), VENUE.into())
+            .expect("error creating ticket");
 
         (db, ticket)
     }
@@ -121,7 +140,7 @@ mod test {
 
     #[rstest]
     #[serial]
-    fn test_scan_ticket(setup: (PickleDb, Ticket)) {
+    fn test_scan_ticket(setup: (PickleDb, Ticket)) -> Result<(), TicketError> {
         let ticket: Ticket = setup.1.clone();
         let ticket_id: Uuid = ticket.id;
         let mut db = setup.0;
@@ -133,13 +152,12 @@ mod test {
         //Mock output
         let mut writer: Vec<u8> = Vec::new();
 
-        let c_ticket: Result<String, TicketError> = create_ticket(ticket, &mut db);
-        assert!(c_ticket.is_ok_and(|message| {
-            message == format!("\nTicket ID: {} Successfully Created!\n\n", ticket_id)
-        }));
+        let message: String = create_ticket(ticket, &mut db)?;
+        assert!(message == format!("\nTicket ID: {} Successfully Created!\n\n", ticket_id));
 
-        let s_ticket: Result<String, String> =
-            scan_ticket(ticket_id, &mut db, &mut reader, &mut writer);
-        assert!(s_ticket.is_ok_and(|message| { message == "\nTicket Used Successfully!" }));
+        let message: String = scan_ticket(ticket_id, &mut db, &mut reader, &mut writer)?;
+        assert!(message == "\nTicket Used Successfully!");
+
+        Ok(())
     }
 }
