@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::crypto;
+use crate::{crypto, event::Event};
 use ed25519_dalek::{Signer, SigningKey, SIGNATURE_LENGTH};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -31,7 +31,7 @@ pub struct Ticket {
     // TODO-Done: use encrypted data for signature
     // TODO: use uuid for event or Event Struct called by uuid
     pub id: Uuid,
-    pub event: String,
+    pub event: Event,
     pub price: Price,
     status: TicketStatus,
     //pub public_key: [u8; PUBLIC_KEY_LENGTH],
@@ -40,11 +40,13 @@ pub struct Ticket {
 }
 
 impl Ticket {
-    pub fn try_new(event: String, price_str: String) -> Result<Self, TicketError> {
+    pub fn try_new(name: String, price_str: String, venue: String) -> Result<Self, TicketError> {
         let price: Price = Price::from_str(&price_str)?;
 
         let id: Uuid = Uuid::new_v4();
         let signing_key: SigningKey = crypto::generate_key(id)?;
+
+        let event: Event = Event { name, venue };
 
         let message_string: String = format!("{id}{price}{event}");
         let message: &[u8] = message_string.as_bytes();
@@ -53,8 +55,8 @@ impl Ticket {
 
         Ok(Self {
             id,
-            event,
             price,
+            event,
             status: TicketStatus::Unused,
             signature,
         })
@@ -72,7 +74,7 @@ impl Ticket {
         crypto::verify_signature(message, self.signature.into(), self.id)
     }
 
-    pub fn burn_ticket(mut self) -> Result<Self, String> {
+    pub fn burn_ticket(mut self) -> Result<Self, TicketError> {
         let message: String = format!("{}{}{}", self.id, self.price, self.event);
         let message: &[u8] = message.as_bytes();
         match crypto::verify_signature(message, self.signature.into(), self.id) {
@@ -84,16 +86,18 @@ impl Ticket {
                             // Ok("ticket has been successfully burned".to_string())
                             Ok(self)
                         }
-                        TicketStatus::Used => Err("Ticket has already been used!".to_string()),
-                        TicketStatus::Cancelled => {
-                            Err("Event has been cancelled. Ticket is invalid!".to_string())
-                        }
+                        TicketStatus::Used => Err(TicketError::InvalidTicket(
+                            "Ticket has already been used!".to_string(),
+                        )),
+                        TicketStatus::Cancelled => Err(TicketError::InvalidTicket(
+                            "Event has been cancelled. Ticket is invalid!".to_string(),
+                        )),
                     }
                 } else {
-                    Err("Ticket is invalid!".to_string())
+                    Err(TicketError::InvalidTicket("Ticket is invalid!".to_string()))
                 }
             }
-            Err(err) => Err(format!("{}", err)),
+            Err(err) => Err(err),
         }
     }
 }
@@ -102,28 +106,28 @@ impl Ticket {
 mod test {
 
     use super::*;
+    use rstest::*;
     const EVENT: &str = "Passe Entrant";
     const PRICE: &str = "90.58";
+    const VENUE: &str = "earth-moon, milkyway";
 
-    #[test]
-    fn test_verify() {
-        let new_ticket: Ticket =
-            Ticket::try_new(EVENT.to_string(), PRICE.into()).expect("Error Creating Ticket");
-        let nt_result: Result<bool, TicketError> = new_ticket.verify();
-        assert!(nt_result.is_ok_and(|is_verified| is_verified));
+    #[fixture]
+    fn ticket() -> Ticket {
+        Ticket::try_new(EVENT.to_string(), PRICE.into(), VENUE.into())
+            .expect("Error Creating Ticket")
     }
 
-    #[test]
-    fn test_burn_ticket() {
-        let new_ticket: Ticket =
-            Ticket::try_new(EVENT.to_string(), PRICE.into()).expect("Error Creating Ticket");
-        match new_ticket.burn_ticket() {
-            Ok(tik) => {
-                assert_eq!(tik.status, TicketStatus::Used);
-            }
-            Err(err) => {
-                assert_eq!(err, "Ticket is invalid!".to_string())
-            }
-        }
+    #[rstest]
+    fn test_verify(ticket: Ticket) -> Result<(), TicketError> {
+        let is_verified: bool = ticket.verify()?;
+        assert!(is_verified);
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_burn_ticket(ticket: Ticket) -> Result<(), TicketError> {
+        let tik: Ticket = ticket.burn_ticket()?;
+        assert_eq!(tik.status, TicketStatus::Used);
+        Ok(())
     }
 }
