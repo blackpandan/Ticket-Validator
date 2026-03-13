@@ -7,7 +7,6 @@ use std::io::{BufRead, Write};
 use uuid::Uuid;
 
 pub fn create_ticket(ticket: Ticket, db: &mut PickleDb) -> Result<String, TicketError> {
-    // GIT: added checks to see if ticket exists before creation
     if !db.exists(format!("{}", ticket.id).as_str()) {
         if let Ok(()) = db.set(format!("{}", ticket.id).as_str(), &ticket) {
             db.dump().map_err(|_err| {
@@ -57,7 +56,6 @@ where
             reader
                 .read_line(&mut user_choice)
                 .map_err(|err| TicketError::DatabaseError(format!("Read Error: {}", err)))?;
-            // println!("you selected {user_choice}");
 
             if user_choice.trim().to_lowercase() == "y" {
                 match ticket.burn_ticket() {
@@ -88,7 +86,6 @@ where
             } else if user_choice.trim().to_lowercase() == "n" {
                 writeln!(writer, "\n\n\n")
                     .map_err(|err| TicketError::DatabaseError(format!("Write Error -> {}", err)))?;
-                // std::process::exit(1);
                 break 'input Err(TicketError::DatabaseError("\nUser Exited CLI".to_string()));
             }
         }
