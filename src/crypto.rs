@@ -130,7 +130,6 @@ mod tests {
         let message: &[u8] = message_string.as_bytes();
 
         let signature = signing_key.sign(message);
-        //assert!(verify_signature(message, signature, id).is_ok_and(|is_verified| is_verified))
         match verify_signature(message, signature, id) {
             Ok(is_verified) => assert!(is_verified),
             Err(err) => {
@@ -138,6 +137,5 @@ mod tests {
                 panic!()
             }
         }
-        //assert!(verify_signature(message, signature, id).is_ok_and(|is_verified| is_verified))
     }
 }

@@ -63,12 +63,6 @@ impl Ticket {
     }
 
     pub fn verify(&self) -> Result<bool, TicketError> {
-        //    let verifying_key: VerifyingKey = VerifyingKey::from_bytes(&self.public_key)
-        //        .map_err(|_err| TicketError::CryptoError("Error getting Public Key".to_string()))?;
-        //    let signature: Signature = Signature::from_bytes(&self.signature);
-        //    let message_string: String = format!("{}{}{}", self.id, self.price, self.event);
-        //
-
         let message: String = format!("{}{}{}", self.id, self.price, self.event);
         let message: &[u8] = message.as_bytes();
         crypto::verify_signature(message, self.signature.into(), self.id)
@@ -83,7 +77,6 @@ impl Ticket {
                     match self.status {
                         TicketStatus::Unused => {
                             self.status = TicketStatus::Used;
-                            // Ok("ticket has been successfully burned".to_string())
                             Ok(self)
                         }
                         TicketStatus::Used => Err(TicketError::InvalidTicket(
