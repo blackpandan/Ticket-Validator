@@ -23,5 +23,8 @@ pub enum Commands {
     },
 
     /// Scans a ticket and burns it up if unsed
-    Scan { ticket_uuid: Uuid },
+    Scan {
+        ticket_uuid: Uuid,
+    },
+    List,
 }
