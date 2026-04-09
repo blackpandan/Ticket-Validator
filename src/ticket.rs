@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use crate::{crypto, event::Event};
 use ed25519_dalek::{Signer, SigningKey, SIGNATURE_LENGTH};
@@ -12,6 +12,16 @@ enum TicketStatus {
     Unused,
     Used,
     Cancelled,
+}
+
+impl fmt::Display for TicketStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TicketStatus::Unused => write!(f, "Status Unused"),
+            TicketStatus::Used => write!(f, "Status Unused"),
+            TicketStatus::Cancelled => write!(f, "Status Unused"),
+        }
+    }
 }
 
 // struct Event {
@@ -92,6 +102,15 @@ impl Ticket {
             }
             Err(err) => Err(err),
         }
+    }
+}
+impl fmt::Display for Ticket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} -> {}, {}, {}  ",
+            self.id, self.event.name, self.price, self.status
+        )
     }
 }
 
