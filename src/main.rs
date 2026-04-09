@@ -65,5 +65,9 @@ fn main() {
                 Err(err) => eprintln!("{}\n\n", err),
             }
         }
+
+        Commands::List => {
+            println!("Ticket Listing Started");
+        }
     }
 }

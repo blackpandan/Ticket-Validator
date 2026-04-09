@@ -96,6 +96,10 @@ where
     }
 }
 
+pub fn list_ticket(db: &mut PickleDb) -> Result<Vec<&str>, TicketError> {
+    unimplemented!()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -109,7 +113,7 @@ mod test {
 
     #[fixture]
     fn setup() -> (PickleDb, Ticket) {
-        let db = PickleDb::new(
+        let mut db = PickleDb::new(
             "mem.db",
             pickledb::PickleDbDumpPolicy::NeverDump,
             pickledb::SerializationMethod::Json,
@@ -117,12 +121,31 @@ mod test {
 
         let ticket = Ticket::try_new(EVENT.to_string(), PRICE.into(), VENUE.into())
             .expect("error creating ticket");
+        let ticket1 = Ticket::try_new("The Moony Trails".to_string(), PRICE.into(), VENUE.into())
+            .expect("error creating ticket");
+        let ticket2 = Ticket::try_new("The Moony Trails 2".to_string(), PRICE.into(), VENUE.into())
+            .expect("error creating ticket");
+        let ticket3 = Ticket::try_new("The Moony Trails 3".to_string(), PRICE.into(), VENUE.into())
+            .expect("error creating ticket");
+
+        let ticket_list: [Ticket; 3] = [ticket1, ticket2, ticket3];
+
+        for test_ticket in ticket_list {
+            if let Ok(()) = db.set(format!("{}", test_ticket.id).as_str(), &test_ticket) {
+                db.dump()
+                    .map_err(|_err| {
+                        TicketError::DatabaseError("\nCould not save ticket".to_string())
+                    })
+                    .expect("error creating ticket");
+            } else {
+                panic!();
+            }
+        }
 
         (db, ticket)
     }
 
     #[rstest]
-    #[serial]
     fn test_create_ticket(setup: (PickleDb, Ticket)) {
         let ticket: Ticket = setup.1.clone();
         let ticket_id = ticket.id;
@@ -136,7 +159,6 @@ mod test {
     }
 
     #[rstest]
-    #[serial]
     fn test_scan_ticket(setup: (PickleDb, Ticket)) -> Result<(), TicketError> {
         let ticket: Ticket = setup.1.clone();
         let ticket_id: Uuid = ticket.id;
@@ -155,6 +177,19 @@ mod test {
         let message: String = scan_ticket(ticket_id, &mut db, &mut reader, &mut writer)?;
         assert!(message == "\nTicket Used Successfully!");
 
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_list_ticket(setup: (PickleDb, Ticket)) -> Result<(), TicketError> {
+        let mut db = setup.0;
+
+        // mock output
+        let mut writer: Vec<u8> = Vec::new();
+
+        let message: Vec<&str> = list_ticket(&mut db)?;
+
+        println!("{:?}", message);
         Ok(())
     }
 }
