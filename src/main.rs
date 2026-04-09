@@ -5,7 +5,7 @@ use std::{io, process};
 // local import
 use ticket_validator::{
     cli::{Commands, TicketValidationCli},
-    db::{create_ticket, scan_ticket},
+    db::{create_ticket, list_ticket, scan_ticket},
     errors::TicketError,
     ticket::Ticket,
 };
@@ -25,9 +25,13 @@ fn main() {
         ),
     };
 
-    println!("\n\n-------------------------------------------------------------------------");
+    println!(
+                "\n\n-----------------------------------------------------------------------------------------"
+            );
     println!("\n    TICKET VALIDATOR");
-    println!("\n--------------------------------------------------------------------------\n\n");
+    println!(
+                "\n-----------------------------------------------------------------------------------------\n\n"
+            );
 
     match &cli.command {
         Commands::Create { name, price, venue } => {
@@ -68,6 +72,28 @@ fn main() {
 
         Commands::List => {
             println!("Ticket Listing Started");
+            let ticket_list: Vec<Ticket> = match list_ticket(&mut db) {
+                Ok(ticket) => {
+                    println!("\nTickets Retrieved Successfully\n");
+                    ticket
+                }
+                Err(error_message) => {
+                    eprintln!("\n{error_message}\n\n");
+                    process::exit(1);
+                }
+            };
+
+            println!(
+                "\n\n-----------------------------------------------------------------------------------------"
+            );
+            println!("            ID -->                      Event Name,  Price,  Status");
+            println!(
+                "-----------------------------------------------------------------------------------------\n"
+            );
+            for ticket in ticket_list {
+                println!("{}", ticket)
+            }
+            println!("\n\n\n")
         }
     }
 }
