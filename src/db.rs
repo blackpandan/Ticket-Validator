@@ -96,15 +96,29 @@ where
     }
 }
 
-pub fn list_ticket(db: &mut PickleDb) -> Result<Vec<&str>, TicketError> {
-    unimplemented!()
+pub fn list_ticket(db: &mut PickleDb) -> Result<Vec<Ticket>, TicketError> {
+    let data_iter = db.iter();
+    let mut data: Vec<Ticket> = Vec::new();
+
+    for item in data_iter {
+        if let Ok(value) = item.get_value::<Ticket>().ok_or(TicketError::DatabaseError) {
+            data.push(value);
+        } else {
+            return Err(TicketError::DatabaseError(
+                "Item in db is empty or cannot be converted to Ticket".into(),
+            ));
+        };
+    }
+
+    Ok(data)
 }
 
 #[cfg(test)]
 mod test {
+
     use super::*;
     use rstest::*;
-    use serial_test::serial;
+    //use serial_test::serial;
     use std::io;
 
     const EVENT: &str = "Tested Event";
@@ -112,7 +126,7 @@ mod test {
     const VENUE: &str = "earth-moon, milkyway";
 
     #[fixture]
-    fn setup() -> (PickleDb, Ticket) {
+    fn setup() -> (PickleDb, Ticket, Vec<Ticket>) {
         let mut db = PickleDb::new(
             "mem.db",
             pickledb::PickleDbDumpPolicy::NeverDump,
@@ -128,9 +142,9 @@ mod test {
         let ticket3 = Ticket::try_new("The Moony Trails 3".to_string(), PRICE.into(), VENUE.into())
             .expect("error creating ticket");
 
-        let ticket_list: [Ticket; 3] = [ticket1, ticket2, ticket3];
+        let ticket_list: Vec<Ticket> = vec![ticket1, ticket2, ticket3];
 
-        for test_ticket in ticket_list {
+        for test_ticket in &ticket_list[..] {
             if let Ok(()) = db.set(format!("{}", test_ticket.id).as_str(), &test_ticket) {
                 db.dump()
                     .map_err(|_err| {
@@ -142,11 +156,11 @@ mod test {
             }
         }
 
-        (db, ticket)
+        (db, ticket, ticket_list)
     }
 
     #[rstest]
-    fn test_create_ticket(setup: (PickleDb, Ticket)) {
+    fn test_create_ticket(setup: (PickleDb, Ticket, Vec<Ticket>)) {
         let ticket: Ticket = setup.1.clone();
         let ticket_id = ticket.id;
 
@@ -159,7 +173,7 @@ mod test {
     }
 
     #[rstest]
-    fn test_scan_ticket(setup: (PickleDb, Ticket)) -> Result<(), TicketError> {
+    fn test_scan_ticket(setup: (PickleDb, Ticket, Vec<Ticket>)) -> Result<(), TicketError> {
         let ticket: Ticket = setup.1.clone();
         let ticket_id: Uuid = ticket.id;
         let mut db = setup.0;
@@ -181,15 +195,28 @@ mod test {
     }
 
     #[rstest]
-    fn test_list_ticket(setup: (PickleDb, Ticket)) -> Result<(), TicketError> {
+    fn test_list_ticket(setup: (PickleDb, Ticket, Vec<Ticket>)) -> Result<(), TicketError> {
         let mut db = setup.0;
+        let ticket_list = setup.2;
+        let ticket_list: Vec<Ticket> = ticket_list
+            .into_iter()
+            .filter(|item| item.event.name.contains("The Moony Trails"))
+            .collect();
 
         // mock output
-        let mut writer: Vec<u8> = Vec::new();
+        let mut _writer: Vec<u8> = Vec::new();
 
-        let message: Vec<&str> = list_ticket(&mut db)?;
+        let message: Vec<Ticket> = list_ticket(&mut db)?;
+        let message: Vec<Ticket> = message
+            .into_iter()
+            .filter(|item| item.event.name.contains("The Moony Trails"))
+            .collect();
 
         println!("{:?}", message);
+
+        //Ok(())
+        //Err(TicketError::DatabaseError("Error".into()))
+        assert_eq!(ticket_list.len(), message.len());
         Ok(())
     }
 }
