@@ -27,4 +27,7 @@ pub enum Commands {
         ticket_uuid: Uuid,
     },
     List,
+    Cancel {
+        name: String,
+    },
 }

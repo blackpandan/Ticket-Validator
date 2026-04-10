@@ -95,5 +95,9 @@ fn main() {
             }
             println!("\n\n\n")
         }
+
+        Commands::Cancel => {
+            println!("Cancelling Event...");
+        }
     }
 }
