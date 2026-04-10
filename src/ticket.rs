@@ -103,6 +103,26 @@ impl Ticket {
             Err(err) => Err(err),
         }
     }
+
+    pub fn cancel_ticket(mut self) -> Result<Self, TicketError> {
+        let message: String = format!("{}{}{}", self.id, self.price, self.event);
+        let message: &[u8] = message.as_bytes();
+        match crypto::verify_signature(message, self.signature.into(), self.id) {
+            Ok(value) => {
+                if value {
+                    match self.status {
+                        _ => {
+                            self.status = TicketStatus::Cancelled;
+                            Ok(self)
+                        }
+                    }
+                } else {
+                    Err(TicketError::InvalidTicket("Ticket is invalid!".to_string()))
+                }
+            }
+            Err(err) => Err(err),
+        }
+    }
 }
 impl fmt::Display for Ticket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -140,6 +160,13 @@ mod test {
     fn test_burn_ticket(ticket: Ticket) -> Result<(), TicketError> {
         let tik: Ticket = ticket.burn_ticket()?;
         assert_eq!(tik.status, TicketStatus::Used);
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_cancel_ticket(ticket: Ticket) -> Result<(), TicketError> {
+        let tik: Ticket = ticket.cancel_ticket()?;
+        assert_eq!(tik.status, TicketStatus::Cancelled);
         Ok(())
     }
 }
