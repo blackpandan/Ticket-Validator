@@ -130,7 +130,7 @@ where
 
     // wait until user makes acceptable choice
     'user: loop {
-        write!(writer, "Do you want to Cancel Event {event_name}")
+        write!(writer, "Do you want to Cancel Event - {event_name} : ")
             .map_err(|err| TicketError::DatabaseError(format!("Write Error -> {}", err)))?;
         writer
             .flush()

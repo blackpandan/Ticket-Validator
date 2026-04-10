@@ -97,8 +97,9 @@ fn main() {
         }
 
         Commands::Cancel { name } => {
-            println!("Cancelling Event...");
-            println!("\n\n'Event Cancelling Started!' -> Event Name: {}", name);
+            println!("\nCancelling Event...");
+            println!("\n\nEvent Cancelling Started! -> Event Name: {}", name);
+            println!("\n");
             let stdin = io::stdin();
             let stdout = io::stdout();
             let message = cancel_event(&mut db, name.to_string(), stdin.lock(), stdout);
