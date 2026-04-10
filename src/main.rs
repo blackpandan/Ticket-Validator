@@ -5,7 +5,7 @@ use std::{io, process};
 // local import
 use ticket_validator::{
     cli::{Commands, TicketValidationCli},
-    db::{create_ticket, list_ticket, scan_ticket},
+    db::{cancel_event, create_ticket, list_ticket, scan_ticket},
     errors::TicketError,
     ticket::Ticket,
 };
@@ -96,8 +96,17 @@ fn main() {
             println!("\n\n\n")
         }
 
-        Commands::Cancel => {
+        Commands::Cancel { name } => {
             println!("Cancelling Event...");
+            println!("\n\n'Event Cancelling Started!' -> Event Name: {}", name);
+            let stdin = io::stdin();
+            let stdout = io::stdout();
+            let message = cancel_event(&mut db, name.to_string(), stdin.lock(), stdout);
+
+            match message {
+                Ok(message) => println!("\n\nCOMPLETED: {}\n\n\n", message.trim()),
+                Err(err) => eprintln!("{}\n\n", err),
+            }
         }
     }
 }
