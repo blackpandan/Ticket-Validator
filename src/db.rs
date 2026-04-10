@@ -46,7 +46,9 @@ where
     ) {
         let mut user_choice = String::new();
 
+        // Loop user choice until an acceptable choice is selected
         'input: loop {
+            // Get user choice
             write!(writer, "\nDo you want to use the ticket? (y/n): ")
                 .map_err(|err| TicketError::DatabaseError(format!("Write Error -> {}", err)))?;
             writer.flush().map_err(|err| {
@@ -58,6 +60,7 @@ where
                 .map_err(|err| TicketError::DatabaseError(format!("Read Error: {}", err)))?;
 
             if user_choice.trim().to_lowercase() == "y" {
+                // Burn/Use the ticket
                 match ticket.burn_ticket() {
                     Ok(nticket) => match db.set(format!("{}", nticket.id).as_str(), &nticket) {
                         Ok(()) => {
@@ -111,6 +114,84 @@ pub fn list_ticket(db: &mut PickleDb) -> Result<Vec<Ticket>, TicketError> {
     }
 
     Ok(data)
+}
+
+pub fn cancel_event<R, W>(
+    db: &mut PickleDb,
+    event_name: String,
+    mut reader: R,
+    mut writer: W,
+) -> Result<String, TicketError>
+where
+    R: BufRead,
+    W: Write,
+{
+    let mut user_choice = String::new();
+
+    // wait until user makes acceptable choice
+    'user: loop {
+        write!(writer, "Do you want to Cancel Event {event_name}")
+            .map_err(|err| TicketError::DatabaseError(format!("Write Error -> {}", err)))?;
+        writer
+            .flush()
+            .map_err(|err| TicketError::DatabaseError(format!("User Input Error -> {}", err)))?;
+        user_choice.clear();
+        reader
+            .read_line(&mut user_choice)
+            .map_err(|err| TicketError::DatabaseError(format!("Read Error: {}", err)))?;
+
+        if user_choice.trim().to_lowercase() == "y" {
+            // get all tickets linked to the event
+            match list_ticket(db) {
+                Ok(ticket_list) => {
+                    let ticket_list = ticket_list
+                        .into_iter()
+                        .filter(|x| x.event.name == event_name);
+
+                    for ticket in ticket_list {
+                        // Burn/Use the ticket
+                        match ticket.cancel_ticket() {
+                            Ok(nticket) => {
+                                match db.set(format!("{}", nticket.id).as_str(), &nticket) {
+                                    Ok(()) => {
+                                        db.dump().map_err(|err| {
+                                            TicketError::DatabaseError(format!(
+                                                "\nError saving database -> {}",
+                                                err
+                                            ))
+                                        })?;
+                                    }
+                                    Err(err) => {
+                                        return Err(TicketError::DatabaseError(format!(
+                                            "\nError updating ticket -> {}",
+                                            err
+                                        )))
+                                    }
+                                }
+                            }
+                            Err(err) => {
+                                return Err(TicketError::DatabaseError(format!(
+                                    "\nError updating ticket: {}",
+                                    err
+                                )))
+                            }
+                        }
+                    }
+
+                    return Ok("\nEvent Cancelled Successfully!".to_string());
+                }
+                Err(_) => {
+                    return Err(TicketError::DatabaseError(
+                        "\nCould not retrieve tickets!".to_string(),
+                    ));
+                }
+            }
+        } else if user_choice.trim().to_lowercase() == "n" {
+            writeln!(writer, "\n\n\n")
+                .map_err(|err| TicketError::DatabaseError(format!("Write Error -> {}", err)))?;
+            break 'user Err(TicketError::DatabaseError("\nUser Exited CLI".to_string()));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -223,7 +304,6 @@ mod test {
     #[rstest]
     fn test_cancel_event(setup: (PickleDb, Ticket, Vec<Ticket>)) -> Result<(), TicketError> {
         let mut db = setup.0;
-        let ticket_list = setup.2;
 
         // MOck INput for std
         let input = "y\n".as_bytes();
@@ -232,9 +312,14 @@ mod test {
         //Mock output
         let mut writer: Vec<u8> = Vec::new();
 
-        let message: String = cancel_event(&mut db, &mut reader, &mut writer)?;
+        let message: String = cancel_event(
+            &mut db,
+            String::from("The Moony Trails"),
+            &mut reader,
+            &mut writer,
+        )?;
 
-        assert!(message, "Event Cancelled Successfully");
-        Err(TicketError::DatabaseError("Error".into()))
+        assert_eq!(message, "\nEvent Cancelled Successfully!");
+        Ok(())
     }
 }
