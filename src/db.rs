@@ -219,4 +219,22 @@ mod test {
         assert_eq!(ticket_list.len(), message.len());
         Ok(())
     }
+
+    #[rstest]
+    fn test_cancel_event(setup: (PickleDb, Ticket, Vec<Ticket>)) -> Result<(), TicketError> {
+        let mut db = setup.0;
+        let ticket_list = setup.2;
+
+        // MOck INput for std
+        let input = "y\n".as_bytes();
+        let mut reader = io::Cursor::new(input);
+
+        //Mock output
+        let mut writer: Vec<u8> = Vec::new();
+
+        let message: String = cancel_event(&mut db, &mut reader, &mut writer)?;
+
+        assert!(message, "Event Cancelled Successfully");
+        Err(TicketError::DatabaseError("Error".into()))
+    }
 }
