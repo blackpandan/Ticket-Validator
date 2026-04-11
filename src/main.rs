@@ -70,12 +70,29 @@ fn main() {
             }
         }
 
-        Commands::List => {
+        Commands::List { filter } => {
             println!("Ticket Listing Started");
             let ticket_list: Vec<Ticket> = match list_ticket(&mut db) {
-                Ok(ticket) => {
+                Ok(tickets) => {
                     println!("\nTickets Retrieved Successfully\n");
-                    ticket
+
+                    match filter {
+                        Some(flag) => {
+                            let values: Vec<&str> = flag.trim().split(':').collect();
+
+                            match values[0].to_lowercase().as_str() {
+                                "event" => tickets
+                                    .into_iter()
+                                    .filter(|ticket| ticket.event.name.contains(values[1]))
+                                    .collect(),
+                                _ => tickets
+                                    .into_iter()
+                                    .filter(|ticket| ticket.event.name.contains(values[1]))
+                                    .collect(),
+                            }
+                        }
+                        _ => tickets,
+                    }
                 }
                 Err(error_message) => {
                     eprintln!("\n{error_message}\n\n");
