@@ -17,9 +17,9 @@ enum TicketStatus {
 impl fmt::Display for TicketStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TicketStatus::Unused => write!(f, "Status Unused"),
-            TicketStatus::Used => write!(f, "Status Unused"),
-            TicketStatus::Cancelled => write!(f, "Status Unused"),
+            TicketStatus::Unused => write!(f, "Unused"),
+            TicketStatus::Used => write!(f, "Used"),
+            TicketStatus::Cancelled => write!(f, "Cancelled"),
         }
     }
 }
@@ -110,12 +110,8 @@ impl Ticket {
         match crypto::verify_signature(message, self.signature.into(), self.id) {
             Ok(value) => {
                 if value {
-                    match self.status {
-                        _ => {
-                            self.status = TicketStatus::Cancelled;
-                            Ok(self)
-                        }
-                    }
+                    self.status = TicketStatus::Cancelled;
+                    Ok(self)
                 } else {
                     Err(TicketError::InvalidTicket("Ticket is invalid!".to_string()))
                 }
