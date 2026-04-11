@@ -149,7 +149,7 @@ where
                         .filter(|x| x.event.name == event_name);
 
                     for ticket in ticket_list {
-                        // Burn/Use the ticket
+                        // Cancel the ticket
                         match ticket.cancel_ticket() {
                             Ok(nticket) => {
                                 match db.set(format!("{}", nticket.id).as_str(), &nticket) {

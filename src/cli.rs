@@ -26,7 +26,10 @@ pub enum Commands {
     Scan {
         ticket_uuid: Uuid,
     },
-    List,
+    List {
+        #[arg(short, long)]
+        filter: Option<String>,
+    },
     Cancel {
         name: String,
     },
